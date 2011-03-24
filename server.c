@@ -11,11 +11,16 @@ int agentCallbackFunc(ChInterp_t interp, MCAgent_t agent, void* user_data);
 EXPORTCH double cost_chdl(void* varg);
 void* masterAgentFunc(stationary_agent_info_t* agent_info);
 
+int handleInform(fipa_acl_message_t* acl);
+int handleDefault(fipa_acl_message_t* acl);
+int handleRequest(fipa_acl_message_t* acl);
+
 double points[20][2];
+
+MCAgency_t agency;
 
 int main() 
 {
-  MCAgency_t agency;
   MCAgencyOptions_t options;
   MC_InitializeAgencyOptions(&options);
   MC_SetThreadOff(&options, MC_THREAD_CP);
@@ -45,8 +50,9 @@ void* masterAgentFunc(stationary_agent_info_t* agent_info)
 {
   fipa_acl_message_t* acl;
   /* Start an agent */
+  startAgent(agent_info->agency);
   while(1) {
-    acl = MC_AclWaitRetrieve(agent_info->agency);
+    acl = MC_AclWaitRetrieve(MC_AgentInfo_GetAgent(agent_info));
     switch(MC_AclGetPerformative(acl)) {
       case FIPA_REQUEST:
         handleRequest(acl);
@@ -81,21 +87,6 @@ int startAgent(MCAgency_t agency)
       "localhost:5051",
       0);
   
-  /* Send the agent a gene */
-  acl = MC_AclNew();
-  MC_AclSetSender(acl, "master", "http://localhost:5051/acc");
-  MC_AclSetPerformative(acl, FIPA_INFORM);
-  MC_AclAddReceiver(acl, name, NULL);
-  /* Create the gene */
-  sprintf(content, "SET_GENE ");
-  for(i = 0; i < 20; i++) {
-    gene[i] = (double) (rand() % 100) - 50;
-    sprintf(buf, "%lf", gene[i]);
-    strcat(content, buf);
-    strcat(content, " ");
-  }
-  MC_AclSetContent(acl, content);
-  MC_AclPost(agent, acl);
   MC_AddAgent(agency, agent);
 }
 
@@ -132,4 +123,43 @@ EXPORTCH double cost_chdl(void* varg)
 
   Ch_VaEnd(interp, ap);
   return retval;
+}
+
+int handleRequest(fipa_acl_message_t* acl)
+{
+  const char* content;
+  char geneStr[400];
+  double gene[20];
+  char buf[80];
+  int i;
+  content = MC_AclGetContent(acl);
+  if(content == NULL) {
+    return -1;
+  }
+  MATCH_CMD(content, "REQUEST_GENE") {
+    acl = MC_AclReply(acl);
+    MC_AclSetPerformative(acl, FIPA_INFORM);
+    /* Create the gene */
+    sprintf(geneStr, "SET_GENE ");
+    for(i = 0; i < 20; i++) {
+      gene[i] = (double) (rand() % 100) - 50;
+      sprintf(buf, "%lf", gene[i]);
+      strcat(geneStr, buf);
+      strcat(geneStr, " ");
+    }
+    MC_AclSetContent(acl, geneStr);
+    MC_AclSend(agency, acl);
+  } 
+}
+
+int handleInform(fipa_acl_message_t* acl)
+{
+  /* TODO */
+  return 0;
+}
+
+int handleDefault(fipa_acl_message_t* acl)
+{
+  /* TODO */
+  return 0;
 }

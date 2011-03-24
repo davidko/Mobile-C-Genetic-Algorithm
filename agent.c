@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <mobilec.h>
+#include "convo_state_machine.h"
+
+#define MATCH_CMD(str, cmd) \
+  if (!strncmp(str, cmd, strlen(cmd)))
 
 int handleSetGene(const char* msgContent);
 int handleProcreate(const char* msgContent);
@@ -18,6 +22,9 @@ int main()
 {
   int i;
   const void* data;
+  convo_state_t* convo_state = NULL;
+  convo_state_t* convo_iter;
+  int event;
   /* Get the saved variables */
   data = mc_AgentVariableRetrieve(
       mc_current_agent, "age", 0); 
@@ -46,7 +53,7 @@ int main()
   mc_AclDestroy(message);
   message = mc_AclWaitRetrieve(mc_current_agent);
   printf("%s\n", mc_AclGetContent(message));
-  return 0;
+  init_convo_state_machine();
   while(1) {
     /* Main operation loop */
     /* If there are any ACL messages, handle them */
@@ -55,18 +62,68 @@ int main()
     if(message) {
       printf("Got a message.\n");
       printf("content: %s\n", mc_AclGetContent(message));
-      handleAclMessage(message);
-      continue;
+      /* Get the 'event' for the message */
+      event = messageGetEvent(message);
+      /* See if there is an existing convo for this message */
+      for(convo_iter = convo_state; convo_iter != NULL; convo_iter = convo_iter->next)
+      {
+        if(convo_iter->convo_id == mc_AclGetConversationID(message)) {
+          convo_iter->acl = message;
+          break;
+        }
+      }
+      if(convo_iter == NULL) {
+        /* New Conversation */
+        convo_iter = convo_state_new(mc_AclGetConversationID(message));
+        convo_iter->acl = message;
+        insert_convo(convo_state, convo_iter);
+      } 
+
+      if(state_table[convo_iter->cur_state][event](convo_iter))
+      {
+        /* Destroy and remove the convo */
+        remove_convo(convo_state, convo_iter);
+        convo_state_destroy(convo_iter);
+      }
     } else {
       usleep(200000);
     }
+    /* Process all conversations for timeouts, etc */
+    for(convo_iter = convo_state; convo_iter != NULL; convo_iter = convo_iter->next)
+    {
+      if(time(NULL) - convo_iter->time_last_action > convo_iter->timeout) {
+        state_table[convo_iter->cur_state][EVENT_TIMEOUT](convo_iter);
+        remove_convo(convo_state, convo_iter);
+        convo_state_destroy(convo_iter);
+      }
+    }
   }
+  return 0;
+}
+
+int messageGetEvent(message)
+{
+  const char* content = mc_AclGetContent(message);
+  MATCH_CMD(content, "REQUEST_MATE") {
+    return EVENT_REQUEST_MATE;
+  } else
+  MATCH_CMD(content, "AFFIRMATIVE") {
+    return EVENT_AFFIRM;
+  } else
+  MATCH_CMD(content, "NEGATIVE") {
+    return EVENT_REJECT;
+  } else 
+  MATCH_CMD(content, "GENE") {
+    return EVENT_RECV_GENE;
+  } else
+  MATCH_CMD(content, "ERROR") {
+    return EVENT_ERROR;
+  }
+  return -1;
 }
 
 int handleAclMessage(fipa_acl_message_t* message) 
 {
-#define MATCH_CMD(str, cmd) \
-  if (!strncmp(str, cmd, strlen(cmd)))
 
   const char* content;
   content = mc_AclGetContent(message);
