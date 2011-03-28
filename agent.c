@@ -125,29 +125,3 @@ int messageGetEvent(fipa_acl_message_t* message)
   return -1;
 }
 
-int handleAclMessage(fipa_acl_message_t* message) 
-{
-
-  const char* content;
-  content = mc_AclGetContent(message);
-  if(mc_AclGetPerformative(message) == FIPA_INFORM) {
-    MATCH_CMD(content, "SET_GENE ") {
-      return handleSetGene(content);
-    } else 
-    MATCH_CMD(content, "INIT_PROCREATE ") {
-      return handleProcreate(content);
-    }
-  }
-  return 0;
-}
-
-int handleSetGene(const char* msgContent)
-{
-  printf("Handle Gene: %s\n", msgContent);
-  return 0;
-}
-
-int handleProcreate(const char* msgContent)
-{ 
-  return 0;
-}
