@@ -25,6 +25,7 @@ int main()
   convo_state_t* convo_state = NULL;
   convo_state_t* convo_iter;
   int event;
+  char buf[80];
   /* Get the saved variables */
   data = mc_AgentVariableRetrieve(
       mc_current_agent, "age", 0); 
@@ -46,13 +47,14 @@ int main()
   /* Request a gene from the master agent */
   message = mc_AclNew();
   mc_AclSetPerformative(message, FIPA_REQUEST);
+  i = rand();
+  sprintf(buf, "%d", i);
+  mc_AclSetConversationID(message, buf);
   mc_AclSetSender(message, mc_agent_name, mc_agent_address);
   mc_AclAddReceiver(message, "master", mc_agent_address);
   mc_AclSetContent(message, "REQUEST_GENE");
   mc_AclSend(message);
   mc_AclDestroy(message);
-  message = mc_AclWaitRetrieve(mc_current_agent);
-  printf("%s\n", mc_AclGetContent(message));
   init_convo_state_machine();
   while(1) {
     /* Main operation loop */
@@ -76,13 +78,14 @@ int main()
         /* New Conversation */
         convo_iter = convo_state_new(mc_AclGetConversationID(message));
         convo_iter->acl = message;
-        insert_convo(convo_state, convo_iter);
+        convo_iter->timeout = 60;
+        insert_convo(&convo_state, convo_iter);
       } 
-
+      
       if(state_table[convo_iter->cur_state][event](convo_iter))
       {
         /* Destroy and remove the convo */
-        remove_convo(convo_state, convo_iter);
+        remove_convo(&convo_state, convo_iter);
         convo_state_destroy(convo_iter);
       }
     } else {
@@ -93,7 +96,7 @@ int main()
     {
       if(time(NULL) - convo_iter->time_last_action > convo_iter->timeout) {
         state_table[convo_iter->cur_state][EVENT_TIMEOUT](convo_iter);
-        remove_convo(convo_state, convo_iter);
+        remove_convo(&convo_state, convo_iter);
         convo_state_destroy(convo_iter);
       }
     }

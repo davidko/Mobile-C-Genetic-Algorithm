@@ -17,6 +17,7 @@ void init_convo_state_machine()
 
   state_table[0][0] = action_s0_e0;
   state_table[0][3] = action_s0_e3;
+  state_table[0][4] = action_s0_e4;
   state_table[1][1] = action_s1_e1;
   state_table[1][2] = action_s1_e2;
   state_table[1][3] = action_s1_e3;
@@ -45,12 +46,12 @@ void convo_state_destroy(convo_state_t* convo)
   free(convo);
 }
 
-int insert_convo(convo_state_t* head, convo_state_t* node)
+int insert_convo(convo_state_t** head, convo_state_t* node)
 {
   /* Just stick it onto the head */
   convo_state_t* tmp;
-  tmp = head;
-  head = node;
+  tmp = *head;
+  *head = node;
   node->next = tmp;
   return 0;
 }
@@ -59,7 +60,7 @@ int remove_convo(convo_state_t** head, convo_state_t* node)
 {
   convo_state_t* iter;
   /* First see if the head matches */
-  if(node == head) {
+  if(node == *head) {
     *head = (*head)->next;
     return 0;
   }
@@ -110,6 +111,11 @@ int action_s0_e4(convo_state_t* state)
     sscanf(tok, "%lf", &gene[i]);
     tok = strtok(NULL, " ");
   }
+  printf("New gene:\n");
+  for(i = 0; i < 20; i++) {
+    printf("%lf ", gene[i]);
+  }
+  printf("\n");
   return 1;
 }
 
@@ -155,6 +161,7 @@ int action_invoke_error(convo_state_t* state)
   fipa_acl_message_t* reply;
   reply = mc_AclReply(state->acl);
   mc_AclSetPerformative(reply, FIPA_FAILURE);
+  mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
   mc_AclSetContent(reply, "ERROR");
   return mc_AclSend(reply);
 }

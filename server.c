@@ -140,7 +140,7 @@ int handleRequest(fipa_acl_message_t* acl)
     acl = MC_AclReply(acl);
     MC_AclSetPerformative(acl, FIPA_INFORM);
     /* Create the gene */
-    sprintf(geneStr, "SET_GENE ");
+    sprintf(geneStr, "GENE ");
     for(i = 0; i < 20; i++) {
       gene[i] = (double) (rand() % 100) - 50;
       sprintf(buf, "%lf", gene[i]);

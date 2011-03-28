@@ -32,7 +32,7 @@ void convo_state_destroy(convo_state_t* convo);
 
 void init_convo_state_machine();
 
-int insert_convo(convo_state_t* head, convo_state_t* node);
+int insert_convo(convo_state_t** head, convo_state_t* node);
 int remove_convo(convo_state_t** head, convo_state_t* node);
 
 /* Return values:
