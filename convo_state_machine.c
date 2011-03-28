@@ -9,8 +9,8 @@ void init_convo_state_machine()
   int i, j;
   memset(state_table, 0, sizeof(state_table));
   /* Load 'invoke error' as default action for all events */
-  for(int i = 0; i < STATE_MAX; i++) {
-    for(int j = 0; j < EVENT_MAX; j++) {
+  for(i = 0; i < STATE_MAX; i++) {
+    for(j = 0; j < EVENT_MAX; j++) {
       state_table[i][j] = action_invoke_error;
     }
   }
@@ -27,11 +27,11 @@ void init_convo_state_machine()
   }
 }
 
-convo_state_t* convo_state_new(int convo_id)
+convo_state_t* convo_state_new(char* convo_id)
 {
   convo_state_t* convo;
   convo = (convo_state_t*)malloc(sizeof(convo_state_t));
-  convo->convo_id = convo_id;
+  convo->convo_id = strdup(convo_id);
   convo->cur_state = 0;
   convo->time_last_action = time(NULL);
   convo->timeout = 0;
@@ -41,6 +41,7 @@ convo_state_t* convo_state_new(int convo_id)
 
 void convo_state_destroy(convo_state_t* convo)
 {
+  free(convo->convo_id);
   free(convo);
 }
 
@@ -56,18 +57,20 @@ int insert_convo(convo_state_t* head, convo_state_t* node)
 
 int remove_convo(convo_state_t** head, convo_state_t* node)
 {
+  convo_state_t* iter;
   /* First see if the head matches */
   if(node == head) {
-    *head = *head->next;
+    *head = (*head)->next;
     return 0;
   }
   /* If it's not the head, traverse the list */
-  while(head->next != NULL) {
-    if(head->next == node) {
-      head->next = head->next->next;
+  iter = *head;
+  while(iter->next != NULL) {
+    if(iter->next == node) {
+      iter->next = iter->next->next;
       return 0;
     }
-    head = head->next;
+    iter = iter->next;
   }
   return 1;
 }
@@ -96,7 +99,7 @@ int action_s0_e3(convo_state_t* state)
 /* Idle, received gene. Replace current gene with new gene */
 int action_s0_e4(convo_state_t* state)
 {
-  const char* content = mc_AclMessageGetContent(state->acl);
+  const char* content = mc_AclGetContent(state->acl);
   char* str = strdup(content+5);
   char* tok;
   int i;

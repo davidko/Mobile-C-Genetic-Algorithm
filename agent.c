@@ -67,7 +67,7 @@ int main()
       /* See if there is an existing convo for this message */
       for(convo_iter = convo_state; convo_iter != NULL; convo_iter = convo_iter->next)
       {
-        if(convo_iter->convo_id == mc_AclGetConversationID(message)) {
+        if(!strcmp(convo_iter->convo_id, mc_AclGetConversationID(message))) {
           convo_iter->acl = message;
           break;
         }
@@ -101,7 +101,7 @@ int main()
   return 0;
 }
 
-int messageGetEvent(message)
+int messageGetEvent(fipa_acl_message_t* message)
 {
   const char* content = mc_AclGetContent(message);
   MATCH_CMD(content, "REQUEST_MATE") {

@@ -148,6 +148,7 @@ int handleRequest(fipa_acl_message_t* acl)
       strcat(geneStr, " ");
     }
     MC_AclSetContent(acl, geneStr);
+    MC_AclSetSender(acl, "master", "http://localhost:5051/acc");
     MC_AclSend(agency, acl);
   } 
 }

@@ -3,10 +3,6 @@
 
 #include <mobilec.h>
 
-#ifdef _CH_
-#pragma importf "convo_state_machine.c"
-#endif
-
 enum states {
   STATE_IDLE,           /* 0  */
   STATE_REQUESTED_MATE, /* 1  */
@@ -23,15 +19,15 @@ enum events {
   EVENT_MAX };
 
 typedef struct convo_state_s {
-  int convo_id;
+  const char* convo_id;
   int cur_state;
   int time_last_action; /* time() of the last known action on this convo. */
   int timeout; /* Timeout length in seconds */
   const fipa_acl_message_t* acl; /* Last received ACL message */
-  convo_state_t* next; /* This is a linked list */
+  struct convo_state_s* next; /* This is a linked list */
 } convo_state_t ;
 
-convo_state_t* convo_state_new();
+convo_state_t* convo_state_new(char* convo_id);
 void convo_state_destroy(convo_state_t* convo);
 
 void init_convo_state_machine();
@@ -52,7 +48,13 @@ int action_s1_e2(convo_state_t* state);
 int action_s1_e3(convo_state_t* state);
 int action_s2_e3(convo_state_t* state);
 int action_s2_e4(convo_state_t* state);
+int action_handle_error(convo_state_t* state);
+int action_invoke_error(convo_state_t* state);
 
 extern int (*const state_table[STATE_MAX][EVENT_MAX]) (convo_state_t* state);
+
+#ifdef _CH_
+#pragma importf "convo_state_machine.c"
+#endif
 
 #endif
