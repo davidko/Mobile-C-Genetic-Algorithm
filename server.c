@@ -132,10 +132,15 @@ int handleRequest(fipa_acl_message_t* acl)
   double gene[20];
   char buf[80];
   int i;
+  MCAgent_t* agents;
+  int num_agents;
+  char* agent_list;
+  char* agent_name;
   content = MC_AclGetContent(acl);
   if(content == NULL) {
     return -1;
   }
+  printf("Server got request: %s\n", content);
   MATCH_CMD(content, "REQUEST_GENE") {
     acl = MC_AclReply(acl);
     MC_AclSetPerformative(acl, FIPA_INFORM);
@@ -150,7 +155,25 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclSetContent(acl, geneStr);
     MC_AclSetSender(acl, "master", "http://localhost:5051/acc");
     MC_AclSend(agency, acl);
-  } 
+  } else 
+  MATCH_CMD(content, "REQUEST_AGENTS") {
+    printf("Server got request agents...\n");
+    acl = MC_AclReply(acl);
+    MC_AclSetPerformative(acl, FIPA_INFORM);
+    MC_AclSetSender(acl, "master", "http://localhost:5051/acc");
+    MC_GetAllAgents(agency, &agents, &num_agents);
+    agent_list = (char*)malloc(20 * num_agents);
+    *agent_list = '\0';
+    sprintf(agent_list, "AGENTS %d ", num_agents);
+    for(i = 0; i < num_agents; i++) {
+      agent_name = MC_GetAgentName(agents[i]);
+      strcat(agent_list, agent_name);
+      strcat(agent_list, " ");
+      free(agent_name);
+    }
+    MC_AclSetContent(acl, agent_list);
+    MC_AclSend(agency, acl);
+  }
 }
 
 int handleInform(fipa_acl_message_t* acl)

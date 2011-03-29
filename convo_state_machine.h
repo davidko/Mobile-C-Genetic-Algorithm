@@ -3,19 +3,25 @@
 
 #include <mobilec.h>
 
+#define PROBABILITY_MATE_SUPERIOR 0.75
+#define PROBABILITY_MATE_INFERIOR 0.25
+extern double g_fitness;
+
 enum states {
   STATE_IDLE,           /* 0  */
   STATE_REQUESTED_MATE, /* 1  */
   STATE_WAIT_FOR_GENE,  /* 2  */
+  STATE_WAIT_FOR_AGENT_LIST, /* 3  */
   STATE_MAX };  
 
 enum events {
-  EVENT_REQUEST_MATE,   /* 0  */
+  EVENT_REQUEST_MATE,   /* 0 , must also include fitness */
   EVENT_AFFIRM,         /* 1  */
   EVENT_REJECT,         /* 2  */
   EVENT_TIMEOUT,        /* 3  */
-  EVENT_RECV_GENE,      /* 4  */
+  EVENT_RECV_GENE,      /* 4 , must include gene */
   EVENT_ERROR,          /* 5  */
+  EVENT_AGENT_LIST,     /* 6 , Receiving an agent list */
   EVENT_MAX };
 
 typedef struct convo_state_s {
@@ -48,6 +54,7 @@ int action_s1_e2(convo_state_t* state);
 int action_s1_e3(convo_state_t* state);
 int action_s2_e3(convo_state_t* state);
 int action_s2_e4(convo_state_t* state);
+int action_s3_e6(convo_state_t* state);
 int action_handle_error(convo_state_t* state);
 int action_invoke_error(convo_state_t* state);
 

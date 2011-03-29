@@ -23,6 +23,7 @@ void init_convo_state_machine()
   state_table[1][3] = action_s1_e3;
   state_table[2][3] = action_s2_e3;
   state_table[2][4] = action_s2_e4;
+  state_table[3][6] = action_s3_e6;
   for(i = 0; i < STATE_MAX; i++) {
     state_table[i][EVENT_ERROR] = action_handle_error;
   }
@@ -84,9 +85,33 @@ int action_s0_e0(convo_state_t* state)
 {
   /* Run the mate algorithm here, respond with "YES" or "NO" */
   /* TODO */
+  const char* content;
+  double fitness;
+  int mate_flag;
+  content = mc_AclGetContent(state->acl);
+  sscanf(content, "%*s %lf", &fitness);
+  if(g_fitness > fitness) {
+    /* We are more fit than the one asking us. Not likely to mate */
+    if((double)rand()/(double)RAND_MAX < PROBABILITY_MATE_INFERIOR) {
+      mate_flag = 1;
+    } else {
+      mate_flag = 0;
+    }
+  } else {
+    /* We are less fit than the asker. Likely to mate */
+    if((double)rand()/(double)RAND_MAX < PROBABILITY_MATE_SUPERIOR) {
+      mate_flag = 1;
+    } else {
+      mate_flag = 0;
+    }
+  }
   fipa_acl_message_t* reply = mc_AclReply(state->acl);
   mc_AclSetPerformative(reply, FIPA_AGREE);
-  mc_AclSetContent(reply, "YES");
+  if(mate_flag) {
+    mc_AclSetContent(reply, "YES");
+  } else {
+    mc_AclSetContent(reply, "NO");
+  }
   mc_AclSend(reply);
   return 1;
 }
@@ -148,6 +173,13 @@ int action_s2_e3(convo_state_t* state)
 int action_s2_e4(convo_state_t* state)
 {
   /* TODO */
+  return 1;
+}
+
+/* Waiting for an agent list, received an agent list */
+int action_s3_e6(convo_state_t* state)
+{
+  printf("Message received: %s\n", mc_AclGetContent(state->acl));
   return 1;
 }
 

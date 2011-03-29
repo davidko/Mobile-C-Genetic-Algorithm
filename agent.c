@@ -16,7 +16,9 @@ int age = 0;
 
 int mate_attempts = 0;
 
-double gene[20];
+#define GENE_SIZE 20
+double gene[GENE_SIZE];
+double g_fitness;
 
 int main()
 {
@@ -24,6 +26,7 @@ int main()
   const void* data;
   convo_state_t* convo_state = NULL;
   convo_state_t* convo_iter;
+  fipa_acl_message_t* message;
   int event;
   char buf[80];
   /* Get the saved variables */
@@ -43,19 +46,30 @@ int main()
     mate_attempts = *(const int*)data;
   }
 
-  fipa_acl_message_t* message;
-  /* Request a gene from the master agent */
-  message = mc_AclNew();
-  mc_AclSetPerformative(message, FIPA_REQUEST);
-  i = rand();
-  sprintf(buf, "%d", i);
-  mc_AclSetConversationID(message, buf);
-  mc_AclSetSender(message, mc_agent_name, mc_agent_address);
-  mc_AclAddReceiver(message, "master", mc_agent_address);
-  mc_AclSetContent(message, "REQUEST_GENE");
-  mc_AclSend(message);
-  mc_AclDestroy(message);
+  data = mc_AgentVariableRetrieve(
+      mc_current_agent, "gene", 0);
+  if(data == NULL) {
+    /* Request a new gene */
+    /* Request a gene from the master agent */
+    message = mc_AclNew();
+    mc_AclSetPerformative(message, FIPA_REQUEST);
+    i = rand();
+    sprintf(buf, "%d", i);
+    mc_AclSetConversationID(message, buf);
+    mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+    mc_AclAddReceiver(message, "master", mc_agent_address);
+    mc_AclSetContent(message, "REQUEST_GENE");
+    mc_AclSend(message);
+    mc_AclDestroy(message);
+  } else {
+    memcpy(gene, data, sizeof(double)*GENE_SIZE);
+  }
+
+  /* Get my fitness */
+  g_fitness = costFunction(gene);
   init_convo_state_machine();
+
+  /* Main state machine loop */
   while(1) {
     /* Main operation loop */
     /* If there are any ACL messages, handle them */
@@ -100,6 +114,25 @@ int main()
         convo_state_destroy(convo_iter);
       }
     }
+
+    /* If there are no currently proceeding conversations, have a 10% chance to
+     * find same mates */
+    if(convo_state == NULL && (double)rand()/(double)RAND_MAX < 0.1) {
+      printf("Get agents...\n");
+      sprintf(buf, "%d", rand());
+      convo_iter = convo_state_new(buf);
+      convo_iter->timeout = 60;
+      convo_iter->cur_state = STATE_WAIT_FOR_AGENT_LIST;
+      insert_convo(&convo_state, convo_iter);
+      message = mc_AclNew();
+      mc_AclSetPerformative(message, FIPA_REQUEST);
+      mc_AclSetConversationID(message, buf);
+      mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+      mc_AclAddReceiver(message, "master", mc_agent_address);
+      mc_AclSetContent(message, "REQUEST_AGENTS");
+      mc_AclSend(message);
+      mc_AclDestroy(message);
+    }
   }
   return 0;
 }
@@ -121,6 +154,9 @@ int messageGetEvent(fipa_acl_message_t* message)
   } else
   MATCH_CMD(content, "ERROR") {
     return EVENT_ERROR;
+  }
+  MATCH_CMD(content, "AGENTS") {
+    return EVENT_AGENT_LIST;
   }
   return -1;
 }
