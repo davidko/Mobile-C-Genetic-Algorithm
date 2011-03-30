@@ -48,9 +48,12 @@ int main()
 
 void* masterAgentFunc(stationary_agent_info_t* agent_info)
 {
+  int i;
   fipa_acl_message_t* acl;
-  /* Start an agent */
-  startAgent(agent_info->agency);
+  /* Start some agents */
+  for(i = 0; i < 5; i++) {
+    startAgent(agent_info->agency);
+  }
   while(1) {
     acl = MC_AclWaitRetrieve(MC_AgentInfo_GetAgent(agent_info));
     switch(MC_AclGetPerformative(acl)) {
@@ -164,15 +167,20 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_GetAllAgents(agency, &agents, &num_agents);
     agent_list = (char*)malloc(20 * num_agents);
     *agent_list = '\0';
-    sprintf(agent_list, "AGENTS %d ", num_agents);
+    sprintf(agent_list, "AGENTS %d ", num_agents - 1);
     for(i = 0; i < num_agents; i++) {
       agent_name = MC_GetAgentName(agents[i]);
+      if(!strcmp(agent_name, "master")) {
+        continue;
+      }
       strcat(agent_list, agent_name);
       strcat(agent_list, " ");
       free(agent_name);
     }
     MC_AclSetContent(acl, agent_list);
     MC_AclSend(agency, acl);
+    free(agent_list);
+    MC_AclDestroy(acl);
   }
 }
 

@@ -19,12 +19,15 @@ int mate_attempts = 0;
 #define GENE_SIZE 20
 double gene[GENE_SIZE];
 double g_fitness;
+convo_state_t* g_convo_state_head;
+
+agent_info_t *g_agent_info_entries[20];
+int g_num_agent_info_entries;
 
 int main()
 {
   int i;
   const void* data;
-  convo_state_t* convo_state = NULL;
   convo_state_t* convo_iter;
   fipa_acl_message_t* message;
   int event;
@@ -65,6 +68,8 @@ int main()
     memcpy(gene, data, sizeof(double)*GENE_SIZE);
   }
 
+  g_num_agent_info_entries = 0;
+
   /* Get my fitness */
   g_fitness = costFunction(gene);
   init_convo_state_machine();
@@ -73,15 +78,12 @@ int main()
   while(1) {
     /* Main operation loop */
     /* If there are any ACL messages, handle them */
-    printf("Retrieving message...\n");
     message = mc_AclRetrieve(mc_current_agent);
     if(message) {
-      printf("Got a message.\n");
-      printf("content: %s\n", mc_AclGetContent(message));
       /* Get the 'event' for the message */
       event = messageGetEvent(message);
       /* See if there is an existing convo for this message */
-      for(convo_iter = convo_state; convo_iter != NULL; convo_iter = convo_iter->next)
+      for(convo_iter = g_convo_state_head; convo_iter != NULL; convo_iter = convo_iter->next)
       {
         if(!strcmp(convo_iter->convo_id, mc_AclGetConversationID(message))) {
           convo_iter->acl = message;
@@ -93,37 +95,37 @@ int main()
         convo_iter = convo_state_new(mc_AclGetConversationID(message));
         convo_iter->acl = message;
         convo_iter->timeout = 60;
-        insert_convo(&convo_state, convo_iter);
+        insert_convo(&g_convo_state_head, convo_iter);
       } 
       
       if(state_table[convo_iter->cur_state][event](convo_iter))
       {
         /* Destroy and remove the convo */
-        remove_convo(&convo_state, convo_iter);
+        remove_convo(&g_convo_state_head, convo_iter);
         convo_state_destroy(convo_iter);
       }
     } else {
       usleep(200000);
     }
     /* Process all conversations for timeouts, etc */
-    for(convo_iter = convo_state; convo_iter != NULL; convo_iter = convo_iter->next)
+    for(convo_iter = g_convo_state_head; convo_iter != NULL; convo_iter = convo_iter->next)
     {
       if(time(NULL) - convo_iter->time_last_action > convo_iter->timeout) {
         state_table[convo_iter->cur_state][EVENT_TIMEOUT](convo_iter);
-        remove_convo(&convo_state, convo_iter);
+        remove_convo(&g_convo_state_head, convo_iter);
         convo_state_destroy(convo_iter);
       }
     }
 
     /* If there are no currently proceeding conversations, have a 10% chance to
      * find same mates */
-    if(convo_state == NULL && (double)rand()/(double)RAND_MAX < 0.1) {
+    if(g_convo_state_head == NULL && (double)rand()/(double)RAND_MAX < 0.1) {
       printf("Get agents...\n");
       sprintf(buf, "%d", rand());
       convo_iter = convo_state_new(buf);
       convo_iter->timeout = 60;
       convo_iter->cur_state = STATE_WAIT_FOR_AGENT_LIST;
-      insert_convo(&convo_state, convo_iter);
+      insert_convo(&g_convo_state_head, convo_iter);
       message = mc_AclNew();
       mc_AclSetPerformative(message, FIPA_REQUEST);
       mc_AclSetConversationID(message, buf);
@@ -139,6 +141,7 @@ int main()
 
 int messageGetEvent(fipa_acl_message_t* message)
 {
+  DEBUGMSG;
   const char* content = mc_AclGetContent(message);
   MATCH_CMD(content, "REQUEST_MATE") {
     return EVENT_REQUEST_MATE;
@@ -154,9 +157,15 @@ int messageGetEvent(fipa_acl_message_t* message)
   } else
   MATCH_CMD(content, "ERROR") {
     return EVENT_ERROR;
-  }
+  } else
   MATCH_CMD(content, "AGENTS") {
     return EVENT_AGENT_LIST;
+  } else
+  MATCH_CMD(content, "REQUEST_FITNESS") {
+    return EVENT_REQUEST_FITNESS;
+  } else
+  MATCH_CMD(content, "FITNESS") {
+    return EVENT_RECEIVE_FITNESS;
   }
   return -1;
 }
