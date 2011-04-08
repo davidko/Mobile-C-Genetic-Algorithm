@@ -15,7 +15,7 @@
 
 #define PROBABILITY_MATE_SUPERIOR 0.75
 #define PROBABILITY_MATE_INFERIOR 0.25
-#define AGENT_RESPONSE_WAIT_TIME 15
+#define AGENT_RESPONSE_WAIT_TIME 5
 enum states {
   STATE_IDLE,           /* 0  */
   STATE_REQUESTED_MATE, /* 1  */
@@ -55,11 +55,13 @@ typedef struct agent_info_s {
 
 agent_info_t* agent_info_new(const char* name, double fitness);
 void agent_info_destroy(agent_info_t* agent_info);
+int compare_agent_info(const void* _a, const void* _b);
 
 void init_convo_state_machine();
 
 int insert_convo(convo_state_t** head, convo_state_t* node);
 int remove_convo(convo_state_t** head, convo_state_t* node);
+void init_mate_proposal(const char* name);
 
 /* Return values:
  * 0  - Everything is OK

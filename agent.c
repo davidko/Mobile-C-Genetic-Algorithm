@@ -66,12 +66,12 @@ int main()
     mc_AclDestroy(message);
   } else {
     memcpy(gene, data, sizeof(double)*GENE_SIZE);
+    g_fitness = costFunction(gene);
   }
 
   g_num_agent_info_entries = 0;
 
   /* Get my fitness */
-  g_fitness = costFunction(gene);
   init_convo_state_machine();
 
   /* Main state machine loop */
@@ -98,6 +98,9 @@ int main()
         insert_convo(&g_convo_state_head, convo_iter);
       } 
       
+      if(event < 0) {
+        printf("ERROR: Invalid event. Message was: %s\n",  mc_AclGetContent(message));
+      }
       if(state_table[convo_iter->cur_state][event](convo_iter))
       {
         /* Destroy and remove the convo */
@@ -166,6 +169,12 @@ int messageGetEvent(fipa_acl_message_t* message)
   } else
   MATCH_CMD(content, "FITNESS") {
     return EVENT_RECEIVE_FITNESS;
+  } else
+  MATCH_CMD(content, "YES") {
+    return EVENT_AFFIRM;
+  } else
+  MATCH_CMD(content, "NO") {
+    return EVENT_REJECT;
   }
   return -1;
 }

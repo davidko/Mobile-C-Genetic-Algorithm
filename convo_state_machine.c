@@ -123,13 +123,16 @@ int action_s0_e0(convo_state_t* state)
     }
   }
   fipa_acl_message_t* reply = mc_AclReply(state->acl);
-  mc_AclSetPerformative(reply, FIPA_AGREE);
+  mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
   if(mate_flag) {
+    mc_AclSetPerformative(reply, FIPA_AGREE);
     mc_AclSetContent(reply, "YES");
   } else {
+    mc_AclSetPerformative(reply, FIPA_CANCEL);
     mc_AclSetContent(reply, "NO");
   }
   mc_AclSend(reply);
+  mc_AclDestroy(reply);
   return 1;
 }
 
@@ -160,6 +163,8 @@ int action_s0_e4(convo_state_t* state)
     printf("%lf ", gene[i]);
   }
   printf("\n");
+  g_fitness = costFunction(gene);
+  printf("%s fitness is %lf\n", mc_agent_name, g_fitness);
   return 1;
 }
 
@@ -189,6 +194,7 @@ int action_s0_e8(convo_state_t* state)
   g_agent_info_entries[g_num_agent_info_entries] = 
     agent_info_new(name, fitness);
   g_num_agent_info_entries++;
+  printf("Received fitness string: %s:%s -> %lf\n", name, mc_AclGetContent(state->acl), fitness);
   free(name);
   free(address);
   return 1;
@@ -246,6 +252,11 @@ int action_s3_e6(convo_state_t* state)
   if(num_agents < 5) {
     return 1;
   } else {
+    /* Reset our original list of fitnesses */
+    for(i = 0; i < g_num_agent_info_entries; i++) {
+      agent_info_destroy(g_agent_info_entries[i]);
+    }
+    g_num_agent_info_entries = 0;
     /* Request the fitness of 10 agents */
     strtok(content, " ");
     /* Skip the first and second argument */
@@ -264,6 +275,7 @@ int action_s3_e6(convo_state_t* state)
       mc_AclSetContent(message, "REQUEST_FITNESS");
       mc_AclSend(message);
       mc_AclDestroy(message);
+      agent_name = strtok(NULL, " ");
     }
     free(content);
 
@@ -281,7 +293,24 @@ int action_s3_e6(convo_state_t* state)
 int action_s4_e3(convo_state_t* state)
 {
   DEBUGMSG;
-  printf("Select mates now!\n");
+  int i, j;
+  /* Propose to the top 5 or half of the length of the number of agents,
+   * whichever is less. */
+  int num_to_propose_to = 
+      g_num_agent_info_entries / 2 > 5 ? 5 : (g_num_agent_info_entries/2);
+  /* Sort the list */
+  qsort(
+      g_agent_info_entries, 
+      g_num_agent_info_entries, 
+      sizeof(agent_info_t*),
+      compare_agent_info);
+  /* Send messages to the top number requesting to mate */
+  j = g_num_agent_info_entries - 1;
+  fipa_acl_message_t* acl;
+  for(i = 0; i < num_to_propose_to; i++ ) {
+    init_mate_proposal(g_agent_info_entries[j]->name);
+    j--;
+  }
   return 1;
 }
 
@@ -302,3 +331,38 @@ int action_invoke_error(convo_state_t* state)
   return mc_AclSend(reply);
 }
 
+int compare_agent_info(const void* _a, const void* _b)
+{
+  agent_info_t* a = *(agent_info_t**)_a;
+  agent_info_t* b = *(agent_info_t**)_b;
+
+  if(a->fitness < b->fitness) {
+    return -1;
+  } else if ( a->fitness > b->fitness ) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+void init_mate_proposal(const char* name)
+{
+  char buf[400];
+  printf("Init mate to %s\n", name);
+  sprintf(buf, "%d", rand());
+  convo_state_t* convo;
+  convo = convo_state_new(buf);
+  convo->cur_state = STATE_REQUESTED_MATE;
+  convo->timeout = 5;
+  insert_convo(&g_convo_state_head, convo);
+  fipa_acl_message_t* msg;
+  msg = mc_AclNew();
+  mc_AclSetSender(msg, mc_agent_name, mc_agent_address);
+  mc_AclAddReceiver(msg, name, mc_agent_address);
+  mc_AclSetPerformative(msg, FIPA_REQUEST);
+  mc_AclSetConversationID(msg, buf);
+  sprintf(buf, "REQUEST_MATE %lf", g_fitness);
+  mc_AclSetContent(msg, buf);
+  mc_AclSend(msg);
+  mc_AclDestroy(msg);
+}
