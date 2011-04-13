@@ -7,7 +7,7 @@
 
 #ifdef DEBUG
 #define DEBUGMSG \
-  printf("%s:%s:%s:%d", mc_agent_name, __func__, __FILE__, __LINE__)
+  printf("%s:%s:%s:%d\n", mc_agent_name, __func__, __FILE__, __LINE__)
 #else
 #define DEBUGMSG
 #endif
@@ -41,7 +41,7 @@ typedef struct convo_state_s {
   int cur_state;
   int time_last_action; /* time() of the last known action on this convo. */
   int timeout; /* Timeout length in seconds */
-  const fipa_acl_message_t* acl; /* Last received ACL message */
+  fipa_acl_message_t* acl; /* Last received ACL message */
   struct convo_state_s* next; /* This is a linked list */
 } convo_state_t ;
 

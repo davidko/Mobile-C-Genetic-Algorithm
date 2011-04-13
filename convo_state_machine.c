@@ -46,22 +46,30 @@ convo_state_t* convo_state_new(const char* convo_id)
 
 void convo_state_destroy(convo_state_t* convo)
 {
+  DEBUGMSG;
+  if(convo->acl) {
+    mc_AclDestroy(convo->acl);
+  }
   free(convo->convo_id);
   free(convo);
+  DEBUGMSG;
 }
 
 int insert_convo(convo_state_t** head, convo_state_t* node)
 {
+  DEBUGMSG;
   /* Just stick it onto the head */
   convo_state_t* tmp;
   tmp = *head;
   *head = node;
   node->next = tmp;
+  DEBUGMSG;
   return 0;
 }
 
 int remove_convo(convo_state_t** head, convo_state_t* node)
 {
+  DEBUGMSG;
   convo_state_t* iter;
   /* First see if the head matches */
   if(node == *head) {
@@ -77,6 +85,7 @@ int remove_convo(convo_state_t** head, convo_state_t* node)
     }
     iter = iter->next;
   }
+  DEBUGMSG;
   return 1;
 }
 
@@ -90,8 +99,10 @@ agent_info_t* agent_info_new(const char* name, double fitness)
 
 void agent_info_destroy(agent_info_t* agent_info)
 {
+  DEBUGMSG;
   free(agent_info->name);
   free(agent_info);
+  DEBUGMSG;
 }
 
 /* State machine actions */
@@ -101,10 +112,12 @@ int action_s0_e0(convo_state_t* state)
 {
   DEBUGMSG;
   /* Run the mate algorithm here, respond with "YES" or "NO" */
-  /* TODO */
   const char* content;
   double fitness;
   int mate_flag;
+  char *buf;
+  char tmp[20];
+  int i;
   content = mc_AclGetContent(state->acl);
   sscanf(content, "%*s %lf", &fitness);
   if(g_fitness > fitness) {
@@ -133,6 +146,25 @@ int action_s0_e0(convo_state_t* state)
   }
   mc_AclSend(reply);
   mc_AclDestroy(reply);
+
+  /* If replied with "YES", also send the gene */
+  if(mate_flag) {
+    reply = mc_AclReply(state->acl);
+    mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
+    mc_AclSetPerformative(reply, FIPA_INFORM);
+    buf = malloc(sizeof(char) * 400);
+    buf[0] = '\0';
+    sprintf(buf, "GENE ");
+    for(i = 0; i < 20; i++) {
+      sprintf(tmp, "%lf ", gene[i]); 
+      strcat(buf, tmp);
+    }
+    mc_AclSetContent(reply, buf);
+    free(buf);
+    mc_AclSend(reply);
+    mc_AclDestroy(reply);
+  }
+  DEBUGMSG;
   return 1;
 }
 
@@ -165,6 +197,7 @@ int action_s0_e4(convo_state_t* state)
   printf("\n");
   g_fitness = costFunction(gene);
   printf("%s fitness is %lf\n", mc_agent_name, g_fitness);
+  DEBUGMSG;
   return 1;
 }
 
@@ -180,6 +213,7 @@ int action_s0_e7(convo_state_t* state)
   mc_AclSetContent(reply, buf);
   mc_AclSend(reply);
   mc_AclDestroy(reply);
+  DEBUGMSG;
   return 1;
 }
 
@@ -197,6 +231,7 @@ int action_s0_e8(convo_state_t* state)
   printf("Received fitness string: %s:%s -> %lf\n", name, mc_AclGetContent(state->acl), fitness);
   free(name);
   free(address);
+  DEBUGMSG;
   return 1;
 }
 
@@ -205,6 +240,7 @@ int action_s1_e1(convo_state_t* state)
 {
   DEBUGMSG;
   state->cur_state = STATE_WAIT_FOR_GENE;
+  DEBUGMSG;
   return 0;
 }
 
@@ -234,6 +270,7 @@ int action_s2_e4(convo_state_t* state)
 {
   DEBUGMSG;
   /* TODO */
+  printf("Produce children!\n");
   return 1;
 }
 
@@ -285,6 +322,7 @@ int action_s3_e6(convo_state_t* state)
     state->timeout = AGENT_RESPONSE_WAIT_TIME;
     insert_convo(&g_convo_state_head, state);
   }
+  DEBUGMSG;
   return 1;
 }
 
@@ -311,6 +349,7 @@ int action_s4_e3(convo_state_t* state)
     init_mate_proposal(g_agent_info_entries[j]->name);
     j--;
   }
+  DEBUGMSG;
   return 1;
 }
 
@@ -328,7 +367,10 @@ int action_invoke_error(convo_state_t* state)
   mc_AclSetPerformative(reply, FIPA_FAILURE);
   mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
   mc_AclSetContent(reply, "ERROR");
-  return mc_AclSend(reply);
+  mc_AclSend(reply);
+  mc_AclDestroy(reply);
+  DEBUGMSG;
+  return 0;
 }
 
 int compare_agent_info(const void* _a, const void* _b)
@@ -347,6 +389,7 @@ int compare_agent_info(const void* _a, const void* _b)
 
 void init_mate_proposal(const char* name)
 {
+  DEBUGMSG;
   char buf[400];
   printf("Init mate to %s\n", name);
   sprintf(buf, "%d", rand());
@@ -365,4 +408,5 @@ void init_mate_proposal(const char* name)
   mc_AclSetContent(msg, buf);
   mc_AclSend(msg);
   mc_AclDestroy(msg);
+  DEBUGMSG;
 }

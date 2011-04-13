@@ -9,9 +9,6 @@
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
-int handleSetGene(const char* msgContent);
-int handleProcreate(const char* msgContent);
-
 int age = 0;
 
 int mate_attempts = 0;
@@ -29,6 +26,7 @@ int main()
   int i;
   const void* data;
   convo_state_t* convo_iter;
+  convo_state_t* convo_tmp;
   fipa_acl_message_t* message;
   int event;
   char buf[80];
@@ -86,6 +84,9 @@ int main()
       for(convo_iter = g_convo_state_head; convo_iter != NULL; convo_iter = convo_iter->next)
       {
         if(!strcmp(convo_iter->convo_id, mc_AclGetConversationID(message))) {
+          if(convo_iter->acl) {
+            mc_AclDestroy(convo_iter->acl);
+          }
           convo_iter->acl = message;
           break;
         }
@@ -111,12 +112,17 @@ int main()
       usleep(200000);
     }
     /* Process all conversations for timeouts, etc */
-    for(convo_iter = g_convo_state_head; convo_iter != NULL; convo_iter = convo_iter->next)
+    convo_iter = g_convo_state_head;
+    while(convo_iter != NULL)
     {
       if(time(NULL) - convo_iter->time_last_action > convo_iter->timeout) {
         state_table[convo_iter->cur_state][EVENT_TIMEOUT](convo_iter);
         remove_convo(&g_convo_state_head, convo_iter);
+        convo_tmp = convo_iter->next;
         convo_state_destroy(convo_iter);
+        convo_iter = convo_tmp;
+      } else {
+        convo_iter = convo_iter->next;
       }
     }
 
