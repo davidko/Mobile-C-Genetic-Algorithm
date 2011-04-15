@@ -2,6 +2,8 @@
 
 extern double gene[20]; /* Global agent gene */
 
+int get_gene_from_content(double gene[20], const char* content);
+
 int (*const state_table[STATE_MAX][EVENT_MAX]) (convo_state_t* state);
 
 void init_convo_state_machine()
@@ -248,6 +250,7 @@ int action_s1_e1(convo_state_t* state)
 int action_s1_e2(convo_state_t* state)
 {
   DEBUGMSG;
+  g_num_rejects++;
   return 1;
 }
 
@@ -269,8 +272,38 @@ int action_s2_e3(convo_state_t* state)
 int action_s2_e4(convo_state_t* state)
 {
   DEBUGMSG;
-  /* TODO */
   printf("Produce children!\n");
+  /* Construct our hybrid gene */
+  char* content = strdup(mc_AclGetContent(state->acl));
+  int cutpoint = rand() % 20;
+  double newgene[20];
+  double othergene[20];
+  int i;
+  get_gene_from_content(othergene, content);
+  for(i = 0; i < cutpoint; i++) {
+    newgene[i] = gene[i];
+  }
+  for(i = cutpoint; i < 20; i++) {
+    newgene[i] = othergene[i];
+  }
+
+  fipa_acl_message_t* message = mc_AclNew();
+  mc_AclSetPerformative(message, FIPA_REQUEST);
+  char buf[800];
+  char tmp[40];
+  sprintf(buf, "%d", rand());
+  mc_AclSetConversationID(message, buf);
+  mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+  mc_AclAddReceiver(message, "master", mc_agent_address);
+  sprintf(buf, "REQUEST_CHILD ");
+  for(i = 0; i < 20; i++) {
+    sprintf(tmp, "%lf ", newgene[i]);
+    strcat(buf, tmp);
+  }
+  mc_AclSetContent(message, buf);
+  mc_AclSend(message);
+  mc_AclDestroy(message);
+  printf("Done producing children.\n");
   return 1;
 }
 
@@ -409,4 +442,25 @@ void init_mate_proposal(const char* name)
   mc_AclSend(msg);
   mc_AclDestroy(msg);
   DEBUGMSG;
+}
+
+int get_gene_from_content(double gene[20], const char* content) {
+  char *str = strdup(content);
+  char *sp = str;
+  char *saveptr;
+  char *tmp;
+  int i = 0;
+  if(!strncmp(str, "GENE ", 5)) { 
+    sp += 5;
+  }
+  tmp = strtok_r(sp, " \t", &saveptr);
+  while(i < 20) {
+    if(tmp == NULL) {
+      return -1;
+    }
+    sscanf(tmp, "%lf", &gene[i]);
+    tmp = strtok_r(NULL, " \t", &saveptr);
+    i++;
+  }
+  return 0;
 }

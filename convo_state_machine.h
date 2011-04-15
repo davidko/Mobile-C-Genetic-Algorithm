@@ -88,6 +88,7 @@ extern double g_fitness;
 extern agent_info_t *g_agent_info_entries[20];
 extern int g_num_agent_info_entries;
 extern convo_state_t* g_convo_state_head;
+extern int g_num_rejects;
 
 #ifdef _CH_
 #pragma importf "convo_state_machine.c"

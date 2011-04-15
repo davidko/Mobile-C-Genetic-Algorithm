@@ -21,6 +21,8 @@ convo_state_t* g_convo_state_head;
 agent_info_t *g_agent_info_entries[20];
 int g_num_agent_info_entries;
 
+int g_num_rejects;
+
 int main()
 {
   int i;
@@ -68,6 +70,7 @@ int main()
   }
 
   g_num_agent_info_entries = 0;
+  g_num_rejects = 0;
 
   /* Get my fitness */
   init_convo_state_machine();

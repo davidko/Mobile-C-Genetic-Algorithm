@@ -15,6 +15,16 @@ int handleInform(fipa_acl_message_t* acl);
 int handleDefault(fipa_acl_message_t* acl);
 int handleRequest(fipa_acl_message_t* acl);
 
+/* When an agent requests a reproduction, it will send a message to the server
+ * saying it wants to create a child with a certain gene. The server will then
+ * store that gene in the following variable and create a generic child agent.
+ * When the child agent initializes, it will ask the server for a gene, at
+ * which time the server will provide the following gene, and unset the flag.
+ * If an agent asks for a gene and the flag is not set, the server will create
+ * a random gene. */
+double gene[20];
+int gene_flag;
+
 double points[20][2];
 
 MCAgency_t agency;
@@ -26,6 +36,7 @@ int main()
   MC_SetThreadOff(&options, MC_THREAD_CP);
   int local_port = 5051;
   int i;
+  gene_flag = 0;
   double *point = &(points[0][0]);
   MCAgent_t agent;
   srand(time(NULL));
@@ -132,8 +143,9 @@ int handleRequest(fipa_acl_message_t* acl)
 {
   const char* content;
   char geneStr[400];
-  double gene[20];
   char buf[80];
+  char *tmp;
+  char *saveptr;
   int i;
   MCAgent_t* agents;
   int num_agents;
@@ -151,11 +163,14 @@ int handleRequest(fipa_acl_message_t* acl)
     /* Create the gene */
     sprintf(geneStr, "GENE ");
     for(i = 0; i < 20; i++) {
-      gene[i] = (double) (rand() % 100) - 50;
+      if(!gene_flag) {
+        gene[i] = (double) (rand() % 100) - 50;
+      }
       sprintf(buf, "%lf", gene[i]);
       strcat(geneStr, buf);
       strcat(geneStr, " ");
     }
+    gene_flag = 0;
     MC_AclSetContent(reply, geneStr);
     MC_AclSetSender(reply, "master", "http://localhost:5051/acc");
     MC_AclSend(agency, reply);
@@ -183,6 +198,18 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclSend(agency, reply);
     free(agent_list);
     MC_AclDestroy(reply);
+  } else
+  MATCH_CMD(content, "REQUEST_CHILD") {
+    strcpy(geneStr, content + strlen("REQUEST_CHILD"));
+    tmp = strtok_r(geneStr, " \t", &saveptr);
+    i = 0;
+    while(tmp != NULL && i < 20) {
+      sscanf(tmp, "%lf", &gene[i]);
+      i++;
+    }
+    gene_flag = 1;
+    /* Add a new agent */
+    startAgent(agency);
   }
   MC_AclDestroy(acl);
 }
