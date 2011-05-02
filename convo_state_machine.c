@@ -22,6 +22,7 @@ void init_convo_state_machine()
   state_table[0][4] = action_s0_e4;
   state_table[0][7] = action_s0_e7;
   state_table[0][8] = action_s0_e8;
+  state_table[0][9] = action_s0_e9;
   state_table[1][1] = action_s1_e1;
   state_table[1][2] = action_s1_e2;
   state_table[1][3] = action_s1_e3;
@@ -199,6 +200,7 @@ int action_s0_e4(convo_state_t* state)
   printf("\n");
   g_fitness = costFunction(gene);
   printf("%s fitness is %lf\n", mc_agent_name, g_fitness);
+  free(str);
   DEBUGMSG;
   return 1;
 }
@@ -235,6 +237,12 @@ int action_s0_e8(convo_state_t* state)
   free(address);
   DEBUGMSG;
   return 1;
+}
+
+/* Got a request to terminate. Just terminate */
+int action_s0_e9(convo_state_t* state)
+{
+  exit(0);
 }
 
 /* Requested mate, received affirmative. Now we must wait for genes. */
@@ -303,6 +311,7 @@ int action_s2_e4(convo_state_t* state)
   mc_AclSetContent(message, buf);
   mc_AclSend(message);
   mc_AclDestroy(message);
+  free(content);
   printf("Done producing children.\n");
   return 1;
 }
@@ -369,6 +378,9 @@ int action_s4_e3(convo_state_t* state)
    * whichever is less. */
   int num_to_propose_to = 
       g_num_agent_info_entries / 2 > 5 ? 5 : (g_num_agent_info_entries/2);
+  if(num_to_propose_to == 0) {
+    return 1;
+  }
   /* Sort the list */
   qsort(
       g_agent_info_entries, 
@@ -456,11 +468,13 @@ int get_gene_from_content(double gene[20], const char* content) {
   tmp = strtok_r(sp, " \t", &saveptr);
   while(i < 20) {
     if(tmp == NULL) {
+      free(str);
       return -1;
     }
     sscanf(tmp, "%lf", &gene[i]);
     tmp = strtok_r(NULL, " \t", &saveptr);
     i++;
   }
+  free(str);
   return 0;
 }

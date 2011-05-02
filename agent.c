@@ -18,7 +18,7 @@ double gene[GENE_SIZE];
 double g_fitness;
 convo_state_t* g_convo_state_head;
 
-agent_info_t *g_agent_info_entries[20];
+agent_info_t *g_agent_info_entries[100];
 int g_num_agent_info_entries;
 
 int g_num_rejects;
@@ -72,7 +72,6 @@ int main()
   g_num_agent_info_entries = 0;
   g_num_rejects = 0;
 
-  /* Get my fitness */
   init_convo_state_machine();
 
   /* Main state machine loop */
@@ -184,6 +183,9 @@ int messageGetEvent(fipa_acl_message_t* message)
   } else
   MATCH_CMD(content, "NO") {
     return EVENT_REJECT;
+  } else
+  MATCH_CMD(content, "TERMINATE") {
+    return EVENT_TERMINATE;
   }
   return -1;
 }

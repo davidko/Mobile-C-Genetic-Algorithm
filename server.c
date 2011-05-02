@@ -29,6 +29,11 @@ double points[20][2];
 
 MCAgency_t agency;
 
+struct agent_info_s {
+  char name[40];
+  double fitness;
+};
+
 int main() 
 {
   MCAgencyOptions_t options;
@@ -39,6 +44,9 @@ int main()
   gene_flag = 0;
   double *point = &(points[0][0]);
   MCAgent_t agent;
+  MCAgent_t *agents;
+  int num_agents;
+  struct agent_info_s agent_info[100];
   srand(time(NULL));
   for(i = 0; i < 40; i++) {
     *point = (rand() % 100) - 50;
@@ -51,7 +59,11 @@ int main()
   /* Start the master handler agent */
   MC_AddStationaryAgent(agency, masterAgentFunc, "master", NULL);
 
-  MC_MainLoop(agency);
+  while(1) {
+  /* Every five seconds or so, get a list of all the agents and kill enough
+   * agents so that we have a standing population of 30 agents. */
+    sleep(5);
+  }
 
   MC_End(agency);
   return 0;

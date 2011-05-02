@@ -34,6 +34,7 @@ enum events {
   EVENT_AGENT_LIST,     /* 6 , Receiving an agent list */
   EVENT_REQUEST_FITNESS,/* 7  */
   EVENT_RECEIVE_FITNESS,/* 8  */
+  EVENT_TERMINATE,      /* 9 , Request that the agent terminate */
   EVENT_MAX };
 
 typedef struct convo_state_s {
@@ -73,6 +74,7 @@ int action_s0_e3(convo_state_t* state);
 int action_s0_e4(convo_state_t* state);
 int action_s0_e7(convo_state_t* state);
 int action_s0_e8(convo_state_t* state);
+int action_s0_e9(convo_state_t* state);
 int action_s1_e1(convo_state_t* state);
 int action_s1_e2(convo_state_t* state);
 int action_s1_e3(convo_state_t* state);
@@ -85,7 +87,7 @@ int action_invoke_error(convo_state_t* state);
 
 extern int (*const state_table[STATE_MAX][EVENT_MAX]) (convo_state_t* state);
 extern double g_fitness;
-extern agent_info_t *g_agent_info_entries[20];
+extern agent_info_t *g_agent_info_entries[100];
 extern int g_num_agent_info_entries;
 extern convo_state_t* g_convo_state_head;
 extern int g_num_rejects;
