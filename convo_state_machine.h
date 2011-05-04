@@ -87,7 +87,7 @@ int action_invoke_error(convo_state_t* state);
 
 extern int (*const state_table[STATE_MAX][EVENT_MAX]) (convo_state_t* state);
 extern double g_fitness;
-extern agent_info_t *g_agent_info_entries[100];
+extern agent_info_t **g_agent_info_entries;
 extern int g_num_agent_info_entries;
 extern convo_state_t* g_convo_state_head;
 extern int g_num_rejects;

@@ -200,6 +200,8 @@ int action_s0_e4(convo_state_t* state)
   printf("\n");
   g_fitness = costFunction(gene);
   printf("%s fitness is %lf\n", mc_agent_name, g_fitness);
+  /* Publish the fitness */
+  mc_AgentDataShare_Add(mc_current_agent, "fitness", &g_fitness, sizeof(g_fitness));
   free(str);
   DEBUGMSG;
   return 1;
@@ -232,7 +234,6 @@ int action_s0_e8(convo_state_t* state)
   g_agent_info_entries[g_num_agent_info_entries] = 
     agent_info_new(name, fitness);
   g_num_agent_info_entries++;
-  printf("Received fitness string: %s:%s -> %lf\n", name, mc_AclGetContent(state->acl), fitness);
   free(name);
   free(address);
   DEBUGMSG;
@@ -382,6 +383,7 @@ int action_s4_e3(convo_state_t* state)
     return 1;
   }
   /* Sort the list */
+  printf("NUM AGENT ENTRIES: %d\n", g_num_agent_info_entries);
   qsort(
       g_agent_info_entries, 
       g_num_agent_info_entries, 

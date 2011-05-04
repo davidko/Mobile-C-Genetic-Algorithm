@@ -18,7 +18,7 @@ double gene[GENE_SIZE];
 double g_fitness;
 convo_state_t* g_convo_state_head;
 
-agent_info_t *g_agent_info_entries[100];
+agent_info_t **g_agent_info_entries;
 int g_num_agent_info_entries;
 
 int g_num_rejects;
@@ -32,6 +32,7 @@ int main()
   fipa_acl_message_t* message;
   int event;
   char buf[80];
+  g_agent_info_entries = (agent_info_t**)malloc(sizeof(agent_info_t*)*20);
   /* Get the saved variables */
   data = mc_AgentVariableRetrieve(
       mc_current_agent, "age", 0); 

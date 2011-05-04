@@ -7,9 +7,19 @@
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
+#define AGENT_POPULATION 10
+
+typedef struct AgentInfo_s {
+  char* name;
+  double fitness;
+} AgentInfo_t;
+
 int agentCallbackFunc(ChInterp_t interp, MCAgent_t agent, void* user_data);
 EXPORTCH double cost_chdl(void* varg);
 void* masterAgentFunc(stationary_agent_info_t* agent_info);
+int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numAgents);
+int compareAgentInfo(const void* _a, const void* _b);
+void* cullAgentFunc(stationary_agent_info_t* agent_info);
 
 int handleInform(fipa_acl_message_t* acl);
 int handleDefault(fipa_acl_message_t* acl);
@@ -58,6 +68,8 @@ int main()
 
   /* Start the master handler agent */
   MC_AddStationaryAgent(agency, masterAgentFunc, "master", NULL);
+  /* Start the agent responsible for controlling the population */
+  MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
 
   while(1) {
   /* Every five seconds or so, get a list of all the agents and kill enough
@@ -90,6 +102,84 @@ void* masterAgentFunc(stationary_agent_info_t* agent_info)
         handleDefault(acl);
         break;
     }
+  }
+}
+
+/* This binary agent is responsible for culling agents from time to time to
+ * keep the agent population in check. */
+void* cullAgentFunc(stationary_agent_info_t* agent_info)
+{
+  MCAgency_t agency = MC_AgentInfo_GetAgency(agent_info);
+  AgentInfo_t *agentList;
+  int numAgents;
+  int i;
+  fipa_acl_message_t* msg;
+  while(1) {
+    sleep(2);
+    composeSortedAgentList(agency, &agentList, &numAgents);
+    if(numAgents > AGENT_POPULATION) {
+      /* Terminate the end of the list */
+      for(i = AGENT_POPULATION; i < numAgents; i++) {
+        printf("\n***TERMINATE %s***\n", (agentList[i]).name);
+        /* Send termination message to each of these agents */
+        msg = MC_AclNew();
+        MC_AclSetPerformative(msg, FIPA_INFORM);
+        MC_AclAddReceiver(msg, (agentList[i]).name, "http://localhost:5051/acc");
+        MC_AclSetContent(msg, "TERMINATE");
+        MC_AclSetSender(msg, "master", "http://localhost:5051/acc");
+        MC_AclSetConversationID(msg, "none");
+        MC_AclSend(agency, msg);
+        MC_AclDestroy(msg);
+      }
+    }
+    free(agentList);
+  }
+}
+
+int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numAgents)
+{
+  MCAgent_t* agents;
+  int num, i, j;
+  char* name;
+  double* fitness;
+  size_t size;
+  MC_GetAllAgents(agency, &agents, &num);
+  *agentList = (AgentInfo_t*)malloc(sizeof(AgentInfo_t)*num);
+  j = 0;
+  for(i = 0; i < num; i++) {
+    name = MC_GetAgentName(agents[i]);
+    if(!strcmp(name, "master") || !strcmp(name, "cullAgent")) {
+      free(name);
+      continue;
+    }
+    MC_AgentDataShare_Retrieve(agents[i], "fitness", (void**)&fitness, &size);
+    if(fitness == NULL) {
+      continue;
+    }
+    (*agentList)[j].name = name;
+    (*agentList)[j].fitness = *fitness;
+
+    j++;
+  }
+  *numAgents = j-1;
+
+  /* Lets go ahead and sort the agent list here */
+  if(*numAgents > 0) 
+    qsort(*agentList, *numAgents, sizeof(AgentInfo_t),  compareAgentInfo);
+  return 0;
+}
+
+int compareAgentInfo(const void* _a, const void* _b)
+{
+  AgentInfo_t *a, *b;
+  a = (AgentInfo_t*)_a;
+  b = (AgentInfo_t*)_b;
+  if(a->fitness > b->fitness) {
+    return 1;
+  } else if (a->fitness < b->fitness) {
+    return -1;
+  } else {
+    return 0;
   }
 }
 
