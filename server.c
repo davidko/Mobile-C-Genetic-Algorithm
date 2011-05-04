@@ -120,7 +120,6 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
     if(numAgents > AGENT_POPULATION) {
       /* Terminate the end of the list */
       for(i = AGENT_POPULATION; i < numAgents; i++) {
-        printf("\n***TERMINATE %s***\n", (agentList[i]).name);
         /* Send termination message to each of these agents */
         msg = MC_AclNew();
         MC_AclSetPerformative(msg, FIPA_INFORM);
@@ -258,7 +257,6 @@ int handleRequest(fipa_acl_message_t* acl)
   if(content == NULL) {
     return -1;
   }
-  printf("Server got request: %s\n", content);
   MATCH_CMD(content, "REQUEST_GENE") {
     reply = MC_AclReply(acl);
     MC_AclSetPerformative(reply, FIPA_INFORM);
@@ -279,7 +277,6 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclDestroy(reply);
   } else 
   MATCH_CMD(content, "REQUEST_AGENTS") {
-    printf("Server got request agents...\n");
     reply = MC_AclReply(acl);
     MC_AclSetPerformative(reply, FIPA_INFORM);
     MC_AclSetSender(reply, "master", "http://localhost:5051/acc");

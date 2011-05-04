@@ -132,7 +132,6 @@ int main()
     /* If there are no currently proceeding conversations, have a 10% chance to
      * find same mates */
     if(g_convo_state_head == NULL && (double)rand()/(double)RAND_MAX < 0.1) {
-      printf("Get agents...\n");
       sprintf(buf, "%d", rand());
       convo_iter = convo_state_new(buf);
       convo_iter->timeout = 60;

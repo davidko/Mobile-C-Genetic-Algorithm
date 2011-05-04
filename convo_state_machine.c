@@ -193,13 +193,7 @@ int action_s0_e4(convo_state_t* state)
     sscanf(tok, "%lf", &gene[i]);
     tok = strtok(NULL, " ");
   }
-  printf("New gene:\n");
-  for(i = 0; i < 20; i++) {
-    printf("%lf ", gene[i]);
-  }
-  printf("\n");
   g_fitness = costFunction(gene);
-  printf("%s fitness is %lf\n", mc_agent_name, g_fitness);
   /* Publish the fitness */
   mc_AgentDataShare_Add(mc_current_agent, "fitness", &g_fitness, sizeof(g_fitness));
   free(str);
@@ -281,7 +275,6 @@ int action_s2_e3(convo_state_t* state)
 int action_s2_e4(convo_state_t* state)
 {
   DEBUGMSG;
-  printf("Produce children!\n");
   /* Construct our hybrid gene */
   char* content = strdup(mc_AclGetContent(state->acl));
   int cutpoint = rand() % 20;
@@ -313,7 +306,6 @@ int action_s2_e4(convo_state_t* state)
   mc_AclSend(message);
   mc_AclDestroy(message);
   free(content);
-  printf("Done producing children.\n");
   return 1;
 }
 
@@ -383,7 +375,6 @@ int action_s4_e3(convo_state_t* state)
     return 1;
   }
   /* Sort the list */
-  printf("NUM AGENT ENTRIES: %d\n", g_num_agent_info_entries);
   qsort(
       g_agent_info_entries, 
       g_num_agent_info_entries, 
@@ -438,7 +429,6 @@ void init_mate_proposal(const char* name)
 {
   DEBUGMSG;
   char buf[400];
-  printf("Init mate to %s\n", name);
   sprintf(buf, "%d", rand());
   convo_state_t* convo;
   convo = convo_state_new(buf);
