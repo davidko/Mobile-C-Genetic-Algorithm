@@ -25,6 +25,7 @@ int g_num_rejects;
 
 int main()
 {
+  printf("Agent online.\n");
   int i;
   const void* data;
   convo_state_t* convo_iter;
@@ -61,7 +62,7 @@ int main()
     sprintf(buf, "%d", i);
     mc_AclSetConversationID(message, buf);
     mc_AclSetSender(message, mc_agent_name, mc_agent_address);
-    mc_AclAddReceiver(message, "master", mc_agent_address);
+    mc_AclAddReceiver(message, "master", NULL);
     mc_AclSetContent(message, "REQUEST_GENE");
     mc_AclSend(message);
     mc_AclDestroy(message);
@@ -134,17 +135,18 @@ int main()
     if(g_convo_state_head == NULL && (double)rand()/(double)RAND_MAX < 0.1) {
       sprintf(buf, "%d", rand());
       convo_iter = convo_state_new(buf);
-      convo_iter->timeout = 60;
+      convo_iter->timeout = 30;
       convo_iter->cur_state = STATE_WAIT_FOR_AGENT_LIST;
       insert_convo(&g_convo_state_head, convo_iter);
       message = mc_AclNew();
       mc_AclSetPerformative(message, FIPA_REQUEST);
       mc_AclSetConversationID(message, buf);
       mc_AclSetSender(message, mc_agent_name, mc_agent_address);
-      mc_AclAddReceiver(message, "master", mc_agent_address);
+      mc_AclAddReceiver(message, "master", NULL);
       mc_AclSetContent(message, "REQUEST_AGENTS");
       mc_AclSend(message);
       mc_AclDestroy(message);
+      printf("Find mates!\n");
     }
   }
   return 0;

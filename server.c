@@ -3,11 +3,13 @@
 #include <libmc.h>
 #include <fipa_acl.h>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
-#define AGENT_POPULATION 10
+#define AGENT_POPULATION 75
 
 typedef struct AgentInfo_s {
   char* name;
@@ -20,10 +22,13 @@ void* masterAgentFunc(stationary_agent_info_t* agent_info);
 int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numAgents);
 int compareAgentInfo(const void* _a, const void* _b);
 void* cullAgentFunc(stationary_agent_info_t* agent_info);
+int startAgent(MCAgency_t agency);
 
 int handleInform(fipa_acl_message_t* acl);
 int handleDefault(fipa_acl_message_t* acl);
 int handleRequest(fipa_acl_message_t* acl);
+
+pthread_mutex_t callback_lock;
 
 /* When an agent requests a reproduction, it will send a message to the server
  * saying it wants to create a child with a certain gene. The server will then
@@ -38,6 +43,8 @@ int gene_flag;
 double points[20][2];
 
 MCAgency_t agency;
+
+stationary_agent_info_t* g_master_agent;
 
 struct agent_info_s {
   char name[40];
@@ -62,19 +69,43 @@ int main()
     *point = (rand() % 100) - 50;
     point++;
   }
+
+  pthread_mutex_init(&callback_lock, NULL);
   
   agency = MC_Initialize(local_port, &options);
   MC_AddAgentInitCallback(agency, agentCallbackFunc, NULL);
+
+  /* Add qsort mutex */
+  MC_SyncInit(agency, 875);
 
   /* Start the master handler agent */
   MC_AddStationaryAgent(agency, masterAgentFunc, "master", NULL);
   /* Start the agent responsible for controlling the population */
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
 
+  /* Start some agents */
+  for(i = 0; i < 20; i++) {
+    startAgent(agency);
+    usleep(500000);
+  }
+
+  AgentInfo_t *agentList;
+  FILE *logfile;
+  logfile = fopen("logfile.txt", "w");
   while(1) {
   /* Every five seconds or so, get a list of all the agents and kill enough
    * agents so that we have a standing population of 30 agents. */
-    sleep(5);
+    sleep(10);
+    composeSortedAgentList(agency, &agentList, &num_agents);
+    /* Calculate avg fitness */
+    int i;
+    double avgfitness = 0;
+    for(i = 0; i < num_agents; i++) {
+      avgfitness += agentList[i].fitness;
+    }
+    avgfitness /= (double)num_agents;
+    fprintf(logfile, "%d %lf\n", num_agents, avgfitness);
+    fflush(logfile);
   }
 
   MC_End(agency);
@@ -83,12 +114,9 @@ int main()
 
 void* masterAgentFunc(stationary_agent_info_t* agent_info)
 {
+  g_master_agent = agent_info;
   int i;
   fipa_acl_message_t* acl;
-  /* Start some agents */
-  for(i = 0; i < 5; i++) {
-    startAgent(agent_info->agency);
-  }
   while(1) {
     acl = MC_AclWaitRetrieve(MC_AgentInfo_GetAgent(agent_info));
     switch(MC_AclGetPerformative(acl)) {
@@ -201,8 +229,10 @@ int startAgent(MCAgency_t agency)
       NULL,
       "localhost:5051",
       0);
-  
+
+  printf("Starting agent...\n");  
   MC_AddAgent(agency, agent);
+  return 0;
 }
 
 /* This callback function is called during the initialization step of each
@@ -216,6 +246,7 @@ int agentCallbackFunc(ChInterp_t interp, MCAgent_t agent, void* user_data)
 
 EXPORTCH double cost_chdl(void* varg)
 {
+  pthread_mutex_lock(&callback_lock);
   double retval;
   double *x;
   ChInterp_t interp;
@@ -237,6 +268,7 @@ EXPORTCH double cost_chdl(void* varg)
   }
 
   Ch_VaEnd(interp, ap);
+  pthread_mutex_unlock(&callback_lock);
   return retval;
 }
 
@@ -277,6 +309,7 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclDestroy(reply);
   } else 
   MATCH_CMD(content, "REQUEST_AGENTS") {
+    printf("Master handling request for agents...\n");
     reply = MC_AclReply(acl);
     MC_AclSetPerformative(reply, FIPA_INFORM);
     MC_AclSetSender(reply, "master", "http://localhost:5051/acc");
@@ -311,6 +344,7 @@ int handleRequest(fipa_acl_message_t* acl)
     startAgent(agency);
   }
   MC_AclDestroy(acl);
+  return 0;
 }
 
 int handleInform(fipa_acl_message_t* acl)
