@@ -92,10 +92,11 @@ int main()
   AgentInfo_t *agentList;
   FILE *logfile;
   logfile = fopen("logfile.txt", "w");
+  int j = 0;
   while(1) {
   /* Every five seconds or so, get a list of all the agents and kill enough
    * agents so that we have a standing population of 30 agents. */
-    sleep(10);
+    sleep(5);
     composeSortedAgentList(agency, &agentList, &num_agents);
     /* Calculate avg fitness */
     int i;
@@ -104,8 +105,9 @@ int main()
       avgfitness += agentList[i].fitness;
     }
     avgfitness /= (double)num_agents;
-    fprintf(logfile, "%d %lf\n", num_agents, avgfitness);
+    fprintf(logfile, "%d %d %lf\n", j, num_agents, avgfitness);
     fflush(logfile);
+    j++;
   }
 
   MC_End(agency);
@@ -258,13 +260,7 @@ EXPORTCH double cost_chdl(void* varg)
   retval = 0;
   double value = 0, term;
   for(i = 0; i < 20; i++) {
-    term = 1;
-    for(j = 0; j < i; j++) {
-      term *= points[i][0];
-    }
-    term *= x[i];
-    value = term - points[i][1];
-    retval += value * value;
+    retval += abs(x[i]);
   }
 
   Ch_VaEnd(interp, ap);
