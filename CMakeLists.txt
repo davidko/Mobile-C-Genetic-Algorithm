@@ -13,6 +13,6 @@ include_directories(../Mobile-C/src/include $ENV{CHHOME}/extern/include)
 
 set(LIBS ${LIBS} mc embedch chsdk dl)
 
-add_executable(server server.c)
+add_executable(server server.c newscast.c)
 
 target_link_libraries(server ${LIBS})

@@ -51,12 +51,22 @@ struct agent_info_s {
   double fitness;
 };
 
-int main() 
+char* g_hostname;
+int g_localport;
+
+int main(int argc, char* argv[]) 
 {
+  if(argc != 3) {
+    printf("Command format: %s <local_hostname> <port>\n", argv[0]);
+    exit(0);
+  }
+  g_hostname = malloc(200);
+  strcpy(g_hostname, argv[1]);
+  int local_port;
+  sscanf(argv[2], "%d", &local_port);
+  g_localport = local_port;
+
   MCAgencyOptions_t options;
-  MC_InitializeAgencyOptions(&options);
-  MC_SetThreadOff(&options, MC_THREAD_CP);
-  int local_port = 5051;
   int i;
   gene_flag = 0;
   double *point = &(points[0][0]);
@@ -72,7 +82,14 @@ int main()
 
   pthread_mutex_init(&callback_lock, NULL);
   
+  MC_InitializeAgencyOptions(&options);
+  MC_SetThreadOff(&options, MC_THREAD_CP);
   agency = MC_Initialize(local_port, &options);
+  if(agency == NULL) {
+    fprintf(stderr, "Error starting agency.\n");
+    exit(-1);
+  }
+
   MC_AddAgentInitCallback(agency, agentCallbackFunc, NULL);
 
   /* Add qsort mutex */
@@ -105,9 +122,12 @@ int main()
       avgfitness += agentList[i].fitness;
     }
     avgfitness /= (double)num_agents;
-    fprintf(logfile, "%d %d %lf\n", j, num_agents, avgfitness);
+    fprintf(logfile, "%d %d %lf %lf %lf\n", j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness);
     fflush(logfile);
     j++;
+    if(j == 50) {
+      exit(0);
+    }
   }
 
   MC_End(agency);

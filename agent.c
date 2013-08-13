@@ -25,7 +25,6 @@ int g_num_rejects;
 
 int main()
 {
-  printf("Agent online.\n");
   int i;
   const void* data;
   convo_state_t* convo_iter;
