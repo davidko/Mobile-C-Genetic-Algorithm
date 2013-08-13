@@ -8,6 +8,7 @@ typedef struct newscasthostinfo_s
   int time;
 } newscasthostinfo_t;
 
+void* newscastAgentFunc(stationary_agent_info_t* arg);
 void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts);
 int host_cmp(newscasthostinfo_t* host1, newscasthostinfo_t* host2);
 void filter_host_duplicates(newscasthostinfo_t* hosts, int *num_hosts);

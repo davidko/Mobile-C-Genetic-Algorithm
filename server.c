@@ -6,6 +6,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "newscast.h"
+
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
@@ -99,6 +101,8 @@ int main(int argc, char* argv[])
   MC_AddStationaryAgent(agency, masterAgentFunc, "master", NULL);
   /* Start the agent responsible for controlling the population */
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
+  /* Start the newscast agent */
+  MC_AddStationaryAgent(agency, newscastAgentFunc, "newscast", NULL);
 
   /* Start some agents */
   for(i = 0; i < 20; i++) {
@@ -164,6 +168,8 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
   int numAgents;
   int i;
   fipa_acl_message_t* msg;
+  char buf[128];
+  sprintf(buf, "http://%s:%d/acc", g_hostname, g_localport);
   while(1) {
     sleep(2);
     composeSortedAgentList(agency, &agentList, &numAgents);
@@ -173,9 +179,9 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
         /* Send termination message to each of these agents */
         msg = MC_AclNew();
         MC_AclSetPerformative(msg, FIPA_INFORM);
-        MC_AclAddReceiver(msg, (agentList[i]).name, "http://localhost:5051/acc");
+        MC_AclAddReceiver(msg, (agentList[i]).name, buf);
         MC_AclSetContent(msg, "TERMINATE");
-        MC_AclSetSender(msg, "master", "http://localhost:5051/acc");
+        MC_AclSetSender(msg, "master", buf);
         MC_AclSetConversationID(msg, "none");
         MC_AclSend(agency, msg);
         MC_AclDestroy(msg);
@@ -240,16 +246,17 @@ int startAgent(MCAgency_t agency)
   /* Generate a random name */
   char name[80];
   char content[400];
-  char buf[80];
+  char buf[128];
   int i;
+  sprintf(buf, "%s:%d", g_hostname, g_localport);
   sprintf(name, "agent%d", rand());
   agent = MC_ComposeAgentFromFile(
       name,
-      "localhost:5051",
+      buf,
       "IEL", 
       "agent.c",
       NULL,
-      "localhost:5051",
+      buf,
       0);
 
   printf("Starting agent...\n");  
@@ -292,7 +299,7 @@ int handleRequest(fipa_acl_message_t* acl)
 {
   const char* content;
   char geneStr[400];
-  char buf[80];
+  char buf[128];
   char *tmp;
   char *saveptr;
   int i;
@@ -320,7 +327,8 @@ int handleRequest(fipa_acl_message_t* acl)
     }
     gene_flag = 0;
     MC_AclSetContent(reply, geneStr);
-    MC_AclSetSender(reply, "master", "http://localhost:5051/acc");
+    sprintf(buf, "http://%s:%d/acc", g_hostname, g_localport);
+    MC_AclSetSender(reply, "master", buf);
     MC_AclSend(agency, reply);
     MC_AclDestroy(reply);
   } else 
@@ -328,7 +336,8 @@ int handleRequest(fipa_acl_message_t* acl)
     printf("Master handling request for agents...\n");
     reply = MC_AclReply(acl);
     MC_AclSetPerformative(reply, FIPA_INFORM);
-    MC_AclSetSender(reply, "master", "http://localhost:5051/acc");
+    sprintf(buf, "http://%s:%d/acc", g_hostname, g_localport);
+    MC_AclSetSender(reply, "master", buf);
     MC_GetAllAgents(agency, &agents, &num_agents);
     agent_list = (char*)malloc(20 * num_agents);
     *agent_list = '\0';
@@ -336,6 +345,12 @@ int handleRequest(fipa_acl_message_t* acl)
     for(i = 0; i < num_agents; i++) {
       agent_name = MC_GetAgentName(agents[i]);
       if(!strcmp(agent_name, "master")) {
+        continue;
+      }
+      if(!strcmp(agent_name, "newscast")) {
+        continue;
+      }
+      if(!strcmp(agent_name, "cullAgent")) {
         continue;
       }
       strcat(agent_list, agent_name);
