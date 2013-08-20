@@ -286,9 +286,13 @@ EXPORTCH double cost_chdl(void* varg)
   int i, j;
   retval = 0;
   double value = 0, term;
+#if 0
   for(i = 0; i < 20; i++) {
     retval += abs(x[i]);
   }
+#endif
+  retval = 2*x[0]*x[1] + 2*x[0] - x[0]*x[0] - 2*x[1]*x[1];
+  retval *= -1;
 
   Ch_VaEnd(interp, ap);
   pthread_mutex_unlock(&callback_lock);
@@ -319,7 +323,8 @@ int handleRequest(fipa_acl_message_t* acl)
     sprintf(geneStr, "GENE ");
     for(i = 0; i < 20; i++) {
       if(!gene_flag) {
-        gene[i] = (double) (rand() % 100) - 50;
+        //gene[i] = (double) (rand() % 100) - 50;
+        gene[i] = (double)rand()/(double)RAND_MAX * 50.0;
       }
       sprintf(buf, "%lf", gene[i]);
       strcat(geneStr, buf);
