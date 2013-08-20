@@ -58,8 +58,9 @@ int g_localport;
 
 int main(int argc, char* argv[]) 
 {
-  if(argc != 3) {
-    printf("Command format: %s <local_hostname> <port>\n", argv[0]);
+  if(argc != 3 && argc != 4) {
+    printf("Command format: %s <local_hostname> <port> [newscast_seed]\n", argv[0]);
+    printf("newscast_seed should be something like http://192.168.1.101:5050/acc\n");
     exit(0);
   }
   g_hostname = malloc(200);
@@ -97,12 +98,22 @@ int main(int argc, char* argv[])
   /* Add qsort mutex */
   MC_SyncInit(agency, 875);
 
+  /* Start the newscast agent */
+  if(argc == 4) {
+    MC_AddStationaryAgent(agency, newscastAgentFunc, "newscast", argv[3]);
+  } else {
+    MC_AddStationaryAgent(agency, newscastAgentFunc, "newscast", NULL);
+  }
+
+  /* DEBUG */
+  while(1) {
+    sleep(1);
+  }
+
   /* Start the master handler agent */
   MC_AddStationaryAgent(agency, masterAgentFunc, "master", NULL);
   /* Start the agent responsible for controlling the population */
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
-  /* Start the newscast agent */
-  MC_AddStationaryAgent(agency, newscastAgentFunc, "newscast", NULL);
 
   /* Start some agents */
   for(i = 0; i < 20; i++) {

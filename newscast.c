@@ -19,7 +19,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
   seed = MC_AgentInfo_GetAgentArgs(arg);
   if(seed) {
     hosts[0].hostname = strdup(seed);
-    hosts[1].time = time(NULL);
+    hosts[0].time = time(NULL);
     numhosts++;
   }
   dynstring_t* content;
@@ -42,7 +42,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
             updateHosts(MC_AclGetContent(acl), hosts, &numhosts);
             content = dynstring_New();
             for(i = 0; i < numhosts; i++) {
-              sprintf(buf, "%s %d", hosts[i].hostname, hosts[i].time);
+              sprintf(buf, "%s %d\n", hosts[i].hostname, hosts[i].time);
               dynstring_Append(content, buf);
             }
             reply = MC_AclReply(acl);
@@ -59,9 +59,14 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
             /* Discard the message */
             MC_AclDestroy(acl);
           }
+        } else {
           /* Check our timeout(s) */
           if(time(NULL) > request_timeout) {
             /* Send a request to a random host */
+            if(numhosts == 0) {
+              request_timeout += 30;
+              break;
+            }
             i = rand() % numhosts;
             acl = MC_AclNew();
             MC_AclSetPerformative(acl, FIPA_REQUEST);
@@ -69,10 +74,11 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
             strcpy(buf, hosts[i].hostname);
             strcpy(last_request_hostname, buf);
             cptr = strtok(buf, " ");
+            printf("Sending message to %s...\n", cptr);
             MC_AclAddReceiver(acl, "newscast", cptr);
             content = dynstring_New();
             /* First, add ourself */
-            sprintf(buf, "http://%s:%d %d\n", g_hostname, g_localport, time());
+            sprintf(buf, "http://%s:%d/acc %d\n", g_hostname, g_localport, time());
             dynstring_Append(content, buf);
             /* Now add every other entry in our list */
             for(i = 0; i < numhosts; i++) {
@@ -104,7 +110,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
               updateHosts(MC_AclGetContent(acl), hosts, &numhosts);
               content = dynstring_New();
               for(i = 0; i < numhosts; i++) {
-                sprintf(buf, "%s %d", hosts[i].hostname, hosts[i].time);
+                sprintf(buf, "%s %d\n", hosts[i].hostname, hosts[i].time);
                 dynstring_Append(content, buf);
               }
               reply = MC_AclReply(acl);
@@ -222,11 +228,11 @@ void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts)
     hosts[*num_hosts].hostname = strdup(pch);
     pch = strtok_r(NULL, " \n", &saveptr);
     sscanf(pch, "%d", &hosts[*num_hosts].time);
-    strtok_r(NULL, " \n", &saveptr);
+    pch = strtok_r(NULL, " \n", &saveptr);
     (*num_hosts)++;
   }
   /* Sort the list */
-  qsort(hosts, sizeof(newscasthostinfo_t), *num_hosts, host_cmp);
+  qsort(hosts, *num_hosts, sizeof(newscasthostinfo_t), host_cmp);
 
   /* Remove duplicates */
   filter_host_duplicates(hosts, num_hosts);
@@ -238,6 +244,12 @@ void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts)
       free(hosts[i].hostname);
     }
     *num_hosts = HOSTLIST_SIZE;
+  }
+
+  /* DEBUG Print the hosts */
+  printf("Hosts updated:\n");
+  for(i = 0; i < *num_hosts; i++) {
+    printf("%s\n", hosts[i].hostname);
   }
 }
 
@@ -261,12 +273,12 @@ void filter_host_duplicates(newscasthostinfo_t* hosts, int *num_hosts)
       }
     }
     if(found) {
-      *num_hosts--;
+      (*num_hosts)--;
       free(hosts[i].hostname);
       for(j = i; j < *num_hosts; j++) {
         hosts[j] = hosts[j+1];
       }
-      continue;
+      i--;
     }
   }
 }
