@@ -104,19 +104,13 @@ int main(int argc, char* argv[])
   } else {
     MC_AddStationaryAgent(agency, newscastAgentFunc, "newscast", NULL);
   }
-
-  /* DEBUG */
-  while(1) {
-    sleep(1);
-  }
-
   /* Start the master handler agent */
   MC_AddStationaryAgent(agency, masterAgentFunc, "master", NULL);
   /* Start the agent responsible for controlling the population */
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
 
   /* Start some agents */
-  for(i = 0; i < 20; i++) {
+  for(i = 0; i < 50; i++) {
     startAgent(agency);
     usleep(500000);
   }
@@ -214,10 +208,14 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
   j = 0;
   for(i = 0; i < num; i++) {
     name = MC_GetAgentName(agents[i]);
-    if(!strcmp(name, "master") || !strcmp(name, "cullAgent")) {
+    if(
+        !strcmp(name, "master") || 
+        !strcmp(name, "cullAgent") ||
+        !strcmp(name, "newscast")) {
       free(name);
       continue;
     }
+    printf("Get fitness from agent %s\n", name);
     MC_AgentDataShare_Retrieve(agents[i], "fitness", (void**)&fitness, &size);
     if(fitness == NULL) {
       continue;
@@ -304,6 +302,7 @@ EXPORTCH double cost_chdl(void* varg)
 #endif
   retval = 2*x[0]*x[1] + 2*x[0] - x[0]*x[0] - 2*x[1]*x[1];
   retval *= -1;
+  sleep(2);
 
   Ch_VaEnd(interp, ap);
   pthread_mutex_unlock(&callback_lock);
