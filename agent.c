@@ -13,7 +13,6 @@ int age = 0;
 
 int mate_attempts = 0;
 
-#define GENE_SIZE 20
 double gene[GENE_SIZE];
 double g_fitness;
 convo_state_t* g_convo_state_head;
@@ -186,6 +185,7 @@ int messageGetEvent(fipa_acl_message_t* message)
     return EVENT_REJECT;
   } else
   MATCH_CMD(content, "TERMINATE") {
+    printf("AGENT TERMINATE MESSAGE RECEIVED\n");
     return EVENT_TERMINATE;
   }
   return -1;

@@ -1,0 +1,3 @@
+[submodule "MobotGA"]
+	path = MobotGA
+	url = ssh://dko@iel2.engr.ucdavis.edu/home/dko/projects/MobotGA.git

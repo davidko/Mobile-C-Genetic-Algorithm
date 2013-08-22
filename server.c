@@ -12,6 +12,7 @@
   if (!strncmp(str, cmd, strlen(cmd)))
 
 #define AGENT_POPULATION 75
+#define GENE_SIZE 120
 
 typedef struct AgentInfo_s {
   char* name;
@@ -39,7 +40,7 @@ pthread_mutex_t callback_lock;
  * which time the server will provide the following gene, and unset the flag.
  * If an agent asks for a gene and the flag is not set, the server will create
  * a random gene. */
-double gene[20];
+double gene[GENE_SIZE];
 int gene_flag;
 
 double points[20][2];
@@ -110,7 +111,7 @@ int main(int argc, char* argv[])
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
 
   /* Start some agents */
-  for(i = 0; i < 50; i++) {
+  for(i = 0; i < 10; i++) {
     startAgent(agency);
     usleep(500000);
   }
@@ -181,6 +182,7 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
     if(numAgents > AGENT_POPULATION) {
       /* Terminate the end of the list */
       for(i = AGENT_POPULATION; i < numAgents; i++) {
+        printf("CULL %s\n", agentList[i].name);
         /* Send termination message to each of these agents */
         msg = MC_AclNew();
         MC_AclSetPerformative(msg, FIPA_INFORM);
@@ -251,7 +253,7 @@ int startAgent(MCAgency_t agency)
 {
   fipa_acl_message_t* acl;
   MCAgent_t agent;
-  double gene[20];
+  double gene[GENE_SIZE];
   /* Generate a random name */
   char name[80];
   char content[400];
@@ -284,7 +286,7 @@ int agentCallbackFunc(ChInterp_t interp, MCAgent_t agent, void* user_data)
 
 EXPORTCH double cost_chdl(void* varg)
 {
-  pthread_mutex_lock(&callback_lock);
+  //pthread_mutex_lock(&callback_lock);
   double retval;
   double *x;
   ChInterp_t interp;
@@ -305,14 +307,14 @@ EXPORTCH double cost_chdl(void* varg)
   sleep(2);
 
   Ch_VaEnd(interp, ap);
-  pthread_mutex_unlock(&callback_lock);
+  //pthread_mutex_unlock(&callback_lock);
   return retval;
 }
 
 int handleRequest(fipa_acl_message_t* acl)
 {
   const char* content;
-  char geneStr[400];
+  static char *geneStr = NULL;
   char buf[128];
   char *tmp;
   char *saveptr;
@@ -322,16 +324,20 @@ int handleRequest(fipa_acl_message_t* acl)
   char* agent_list;
   char* agent_name;
   fipa_acl_message_t* reply;
+  if(geneStr == NULL) {
+    geneStr = malloc(20 * GENE_SIZE);
+  }
   content = MC_AclGetContent(acl);
   if(content == NULL) {
     return -1;
   }
+  printf("Get message with content: %s\n", content);
   MATCH_CMD(content, "REQUEST_GENE") {
     reply = MC_AclReply(acl);
     MC_AclSetPerformative(reply, FIPA_INFORM);
     /* Create the gene */
     sprintf(geneStr, "GENE ");
-    for(i = 0; i < 20; i++) {
+    for(i = 0; i < GENE_SIZE; i++) {
       if(!gene_flag) {
         //gene[i] = (double) (rand() % 100) - 50;
         gene[i] = (double)rand()/(double)RAND_MAX * 50.0;
@@ -381,7 +387,7 @@ int handleRequest(fipa_acl_message_t* acl)
     strcpy(geneStr, content + strlen("REQUEST_CHILD"));
     tmp = strtok_r(geneStr, " \t", &saveptr);
     i = 0;
-    while(tmp != NULL && i < 20) {
+    while(tmp != NULL && i < GENE_SIZE) {
       sscanf(tmp, "%lf", &gene[i]);
       i++;
     }

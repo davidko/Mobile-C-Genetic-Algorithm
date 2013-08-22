@@ -12,6 +12,7 @@
 #define DEBUGMSG
 #endif
 
+#define GENE_SIZE 120
 
 #define PROBABILITY_MATE_SUPERIOR 0.75
 #define PROBABILITY_MATE_INFERIOR 0.25
@@ -78,10 +79,14 @@ int action_s0_e9(convo_state_t* state);
 int action_s1_e1(convo_state_t* state);
 int action_s1_e2(convo_state_t* state);
 int action_s1_e3(convo_state_t* state);
+int action_s1_e9(convo_state_t* state);
 int action_s2_e3(convo_state_t* state);
 int action_s2_e4(convo_state_t* state);
+int action_s2_e9(convo_state_t* state);
 int action_s3_e6(convo_state_t* state);
+int action_s3_e9(convo_state_t* state);
 int action_s4_e3(convo_state_t* state);
+int action_s4_e9(convo_state_t* state);
 int action_handle_error(convo_state_t* state);
 int action_invoke_error(convo_state_t* state);
 

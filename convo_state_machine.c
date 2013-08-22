@@ -1,8 +1,8 @@
 #include "convo_state_machine.h"
 
-extern double gene[20]; /* Global agent gene */
+extern double gene[GENE_SIZE]; /* Global agent gene */
 
-int get_gene_from_content(double gene[20], const char* content);
+int get_gene_from_content(double gene[GENE_SIZE], const char* content);
 
 int (*const state_table[STATE_MAX][EVENT_MAX]) (convo_state_t* state);
 
@@ -26,10 +26,14 @@ void init_convo_state_machine()
   state_table[1][1] = action_s1_e1;
   state_table[1][2] = action_s1_e2;
   state_table[1][3] = action_s1_e3;
+  state_table[1][9] = action_s1_e9;
   state_table[2][3] = action_s2_e3;
   state_table[2][4] = action_s2_e4;
+  state_table[2][9] = action_s2_e9;
   state_table[3][6] = action_s3_e6;
+  state_table[3][9] = action_s3_e9;
   state_table[4][3] = action_s4_e3;
+  state_table[4][9] = action_s4_e9;
   for(i = 0; i < STATE_MAX; i++) {
     state_table[i][EVENT_ERROR] = action_handle_error;
   }
@@ -157,10 +161,10 @@ int action_s0_e0(convo_state_t* state)
     reply = mc_AclReply(state->acl);
     mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
     mc_AclSetPerformative(reply, FIPA_INFORM);
-    buf = malloc(sizeof(char) * 400);
+    buf = malloc(GENE_SIZE*20);
     buf[0] = '\0';
     sprintf(buf, "GENE ");
-    for(i = 0; i < 20; i++) {
+    for(i = 0; i < GENE_SIZE; i++) {
       sprintf(tmp, "%lf ", gene[i]); 
       strcat(buf, tmp);
     }
@@ -191,7 +195,7 @@ int action_s0_e4(convo_state_t* state)
   /* The beginning part of the content should be "GENE ", followed by 20 double
    * numbers. */
   tok = strtok(str, " ");
-  for(i = 0; i < 20; i++) {
+  for(i = 0; i < GENE_SIZE; i++) {
     sscanf(tok, "%lf", &gene[i]);
     tok = strtok(NULL, " ");
   }
@@ -267,6 +271,12 @@ int action_s1_e3(convo_state_t* state)
   return 1;
 }
 
+/* Got a request to terminate. Just terminate */
+int action_s1_e9(convo_state_t* state)
+{
+  exit(0);
+}
+
 /* Waiting for gene, timed out. */
 int action_s2_e3(convo_state_t* state)
 {
@@ -280,28 +290,29 @@ int action_s2_e4(convo_state_t* state)
   DEBUGMSG;
   /* Construct our hybrid gene */
   char* content = strdup(mc_AclGetContent(state->acl));
-  int cutpoint = rand() % 20;
-  double newgene[20];
-  double othergene[20];
+  int cutpoint = rand() % GENE_SIZE;
+  double newgene[GENE_SIZE];
+  double othergene[GENE_SIZE];
   int i;
   get_gene_from_content(othergene, content);
   for(i = 0; i < cutpoint; i++) {
     newgene[i] = gene[i];
   }
-  for(i = cutpoint; i < 20; i++) {
+  for(i = cutpoint; i < GENE_SIZE; i++) {
     newgene[i] = othergene[i];
   }
 
   fipa_acl_message_t* message = mc_AclNew();
   mc_AclSetPerformative(message, FIPA_REQUEST);
-  char buf[800];
+  char *buf;
+  buf = malloc(20 * GENE_SIZE);
   char tmp[40];
   sprintf(buf, "%d", rand());
   mc_AclSetConversationID(message, buf);
   mc_AclSetSender(message, mc_agent_name, mc_agent_address);
   mc_AclAddReceiver(message, "master", NULL);
   sprintf(buf, "REQUEST_CHILD ");
-  for(i = 0; i < 20; i++) {
+  for(i = 0; i < GENE_SIZE; i++) {
     sprintf(tmp, "%lf ", newgene[i]);
     strcat(buf, tmp);
   }
@@ -309,7 +320,14 @@ int action_s2_e4(convo_state_t* state)
   mc_AclSend(message);
   mc_AclDestroy(message);
   free(content);
+  free(buf);
   return 1;
+}
+
+/* Got a request to terminate. Just terminate */
+int action_s2_e9(convo_state_t* state)
+{
+  exit(0);
 }
 
 /* Waiting for an agent list, received an agent list */
@@ -364,6 +382,12 @@ int action_s3_e6(convo_state_t* state)
   return 1;
 }
 
+/* Got a request to terminate. Just terminate */
+int action_s3_e9(convo_state_t* state)
+{
+  exit(0);
+}
+
 /* Waiting period before mate selection has passed. Now we must select from
  * possible mates */
 int action_s4_e3(convo_state_t* state)
@@ -396,6 +420,12 @@ int action_s4_e3(convo_state_t* state)
   }
   DEBUGMSG;
   return 1;
+}
+
+/* Got a request to terminate. Just terminate */
+int action_s4_e9(convo_state_t* state)
+{
+  exit(0);
 }
 
 int action_handle_error(convo_state_t* state) 
@@ -457,7 +487,7 @@ void init_mate_proposal(const char* name)
   DEBUGMSG;
 }
 
-int get_gene_from_content(double gene[20], const char* content) {
+int get_gene_from_content(double gene[GENE_SIZE], const char* content) {
   char *str = strdup(content);
   char *sp = str;
   char *saveptr;
@@ -467,7 +497,7 @@ int get_gene_from_content(double gene[20], const char* content) {
     sp += 5;
   }
   tmp = strtok_r(sp, " \t", &saveptr);
-  while(i < 20) {
+  while(i < GENE_SIZE) {
     if(tmp == NULL) {
       free(str);
       return -1;
