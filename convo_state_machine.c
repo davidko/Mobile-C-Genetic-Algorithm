@@ -202,7 +202,11 @@ int action_s0_e4(convo_state_t* state)
   g_fitness = costFunction(gene);
   /* Publish the fitness */
   mc_AgentDataShare_Add(mc_current_agent, "fitness", &g_fitness, sizeof(g_fitness));
-  printf("Agent received genes of fitness %le\n", g_fitness);
+  printf("Agent received genes of fitness %le ", g_fitness);
+  for(i = 0; i < GENE_SIZE; i++) {
+    printf("%lf ", gene[i]);
+  }
+  printf("\n");
   free(str);
   DEBUGMSG;
   return 1;

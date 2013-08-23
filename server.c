@@ -5,6 +5,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "newscast.h"
 
@@ -32,6 +33,9 @@ int handleDefault(fipa_acl_message_t* acl);
 int handleRequest(fipa_acl_message_t* acl);
 
 pthread_mutex_t callback_lock;
+pthread_cond_t callback_cond;
+int callback_num_instances = 0;
+#define CALLBACK_MAX_INSTANCES 8
 
 /* When an agent requests a reproduction, it will send a message to the server
  * saying it wants to create a child with a certain gene. The server will then
@@ -85,6 +89,7 @@ int main(int argc, char* argv[])
   }
 
   pthread_mutex_init(&callback_lock, NULL);
+  pthread_cond_init(&callback_cond, NULL);
   
   MC_InitializeAgencyOptions(&options);
   MC_SetThreadOff(&options, MC_THREAD_CP);
@@ -286,28 +291,79 @@ int agentCallbackFunc(ChInterp_t interp, MCAgent_t agent, void* user_data)
 
 EXPORTCH double cost_chdl(void* varg)
 {
-  //pthread_mutex_lock(&callback_lock);
+  pthread_mutex_lock(&callback_lock);
+  while(callback_num_instances > CALLBACK_MAX_INSTANCES) {
+    pthread_cond_wait(&callback_cond, &callback_lock);
+  }
+  callback_num_instances++;
+  pthread_mutex_unlock(&callback_lock);
+
+  static double lowest_gene = 0;
   double retval;
-  double *x;
+  double *gene;
   ChInterp_t interp;
   ChVaList_t ap;
 
   Ch_VaStart(interp, ap, varg);
-  x = Ch_VaArg(interp, ap, double*);
+  gene = Ch_VaArg(interp, ap, double*);
   int i, j;
   retval = 0;
   double value = 0, term;
 #if 0
   for(i = 0; i < 20; i++) {
-    retval += abs(x[i]);
+    retval += abs(gene[i]);
   }
 #endif
-  retval = 2*x[0]*x[1] + 2*x[0] - x[0]*x[0] - 2*x[1]*x[1];
-  retval *= -1;
-  sleep(2);
+  /* Create temporary file with genes */
+  char tmpfilename[80];
+  strcpy(tmpfilename, "tmpgenefile.XXXXXX");
+  int fd = mkstemp(tmpfilename);
+  FILE* fp = fdopen(fd, "w");
+  if(fp == NULL) {
+    fprintf(stderr, "WARNING: Could not open temporary file: %s\n", tmpfilename);
+    return 0;
+  }
+  for(i = 0; i < GENE_SIZE; i++) {
+    fprintf(fp, "%lf\n", gene[i]);
+  }
+  fclose(fp);
+  /* Run the simulation program */
+  char outputfilename[80];
+  strcpy(outputfilename, tmpfilename);
+  strcat(outputfilename, ".output");
+  char buf[200];
+  sprintf(buf, "LD_LIBRARY_PATH=/usr/lib/panda3d ../MobotGA/main --disable-graphics --load-coefs %s > %s",
+      tmpfilename, outputfilename);
+  system(buf);
+  fp = fopen(outputfilename, "r");
+  if(fp == NULL) {
+    fprintf(stderr, "WARNING: Could not open temporary file: %s\n", outputfilename);
+    return 0;
+  }
+  double x, y, z;
+  fscanf(fp, "%lf %lf %lf", &x, &y, &z);
+  retval = -sqrt(x*x + y*y + z*z);
+  fclose(fp);
+  unlink(tmpfilename);
+  unlink(outputfilename);
+  
+  //retval = 2*gene[0]*gene[1] + 2*gene[0] - gene[0]*gene[0] - 2*gene[1]*gene[1];
+  //retval *= -1;
+  //sleep(2);
 
   Ch_VaEnd(interp, ap);
-  //pthread_mutex_unlock(&callback_lock);
+  pthread_mutex_lock(&callback_lock);
+  if(retval < lowest_gene) {
+    lowest_gene = retval;
+    fp = fopen("lowest_gene.txt", "w");
+    for(i = 0; i < GENE_SIZE; i++) {
+      fprintf(fp, "%lf\n", gene[i]);
+    }
+    fclose(fp);
+  }
+  callback_num_instances--;
+  pthread_cond_signal(&callback_cond);
+  pthread_mutex_unlock(&callback_lock);
   return retval;
 }
 
@@ -340,7 +396,7 @@ int handleRequest(fipa_acl_message_t* acl)
     for(i = 0; i < GENE_SIZE; i++) {
       if(!gene_flag) {
         //gene[i] = (double) (rand() % 100) - 50;
-        gene[i] = (double)rand()/(double)RAND_MAX * 50.0;
+        gene[i] = (double)rand()/(double)RAND_MAX * 5.0;
       }
       sprintf(buf, "%lf", gene[i]);
       strcat(geneStr, buf);
@@ -389,6 +445,7 @@ int handleRequest(fipa_acl_message_t* acl)
     i = 0;
     while(tmp != NULL && i < GENE_SIZE) {
       sscanf(tmp, "%lf", &gene[i]);
+      tmp = strtok_r(NULL, " \t", &saveptr);
       i++;
     }
     gene_flag = 1;

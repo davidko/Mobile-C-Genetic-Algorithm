@@ -11,7 +11,7 @@ project(MCGA)
 link_directories($ENV{CHHOME}/extern/lib)
 include_directories(../Mobile-C/src/include $ENV{CHHOME}/extern/include)
 
-set(LIBS ${LIBS} mc embedch chsdk dl)
+set(LIBS ${LIBS} mc embedch chsdk dl m)
 
 add_executable(server server.c newscast.c)
 
