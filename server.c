@@ -14,6 +14,7 @@
 
 #define AGENT_POPULATION 75
 #define GENE_SIZE 120
+#define NUM_GENERATIONS 100
 
 typedef struct AgentInfo_s {
   char* name;
@@ -140,7 +141,7 @@ int main(int argc, char* argv[])
     fprintf(logfile, "%d %d %lf %lf %lf\n", j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness);
     fflush(logfile);
     j++;
-    if(j == 50) {
+    if(j == NUM_GENERATIONS) {
       exit(0);
     }
   }
@@ -450,7 +451,14 @@ int handleRequest(fipa_acl_message_t* acl)
     }
     gene_flag = 1;
     /* Add a new agent */
-    startAgent(agency);
+    /* If there are too many cost-functions running already, cancel starting the new agent. */
+    pthread_mutex_lock(&callback_lock);
+    if(callback_num_instances < CALLBACK_MAX_INSTANCES) {
+      pthread_mutex_unlock(&callback_lock);
+      startAgent(agency);
+    } else {
+      pthread_mutex_unlock(&callback_lock);
+    }
   }
   MC_AclDestroy(acl);
   return 0;
