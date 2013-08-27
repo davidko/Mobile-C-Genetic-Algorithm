@@ -12,7 +12,7 @@
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
-#define AGENT_POPULATION 75
+#define AGENT_POPULATION 20
 #define GENE_SIZE 120
 #define NUM_GENERATIONS 100
 
@@ -138,8 +138,10 @@ int main(int argc, char* argv[])
       avgfitness += agentList[i].fitness;
     }
     avgfitness /= (double)num_agents;
+    g_avg_fitness = avgfitness;
     fprintf(logfile, "%d %d %lf %lf %lf\n", j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness);
     fflush(logfile);
+    free(agentList);
     j++;
     if(j == NUM_GENERATIONS) {
       exit(0);
@@ -212,7 +214,7 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
   double* fitness;
   size_t size;
   MC_GetAllAgents(agency, &agents, &num);
-  *agentList = (AgentInfo_t*)malloc(sizeof(AgentInfo_t)*num);
+  *agentList = (AgentInfo_t*)malloc(sizeof(AgentInfo_t)*(num+10));
   j = 0;
   for(i = 0; i < num; i++) {
     name = MC_GetAgentName(agents[i]);
@@ -233,7 +235,7 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
 
     j++;
   }
-  *numAgents = j-1;
+  *numAgents = j;
 
   /* Lets go ahead and sort the agent list here */
   if(*numAgents > 0) 

@@ -4,6 +4,8 @@
 #include "newscast.h"
 #include <dynstring.h>
 
+double g_avg_fitness = 0; // Current average fitness of the local agency 
+
 /* This binary agent is the newscast manager for the agency, communicating with
  * other newscast agents to maintain a network of online agencies. */
 void* newscastAgentFunc(stationary_agent_info_t* arg)
@@ -42,7 +44,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
             updateHosts(MC_AclGetContent(acl), hosts, &numhosts);
             content = dynstring_New();
             for(i = 0; i < numhosts; i++) {
-              sprintf(buf, "%s %d\n", hosts[i].hostname, hosts[i].time);
+              sprintf(buf, "%s %d %lf\n", hosts[i].hostname, hosts[i].time, hosts[i].fitness);
               dynstring_Append(content, buf);
             }
             reply = MC_AclReply(acl);
@@ -78,11 +80,11 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
             MC_AclAddReceiver(acl, "newscast", cptr);
             content = dynstring_New();
             /* First, add ourself */
-            sprintf(buf, "http://%s:%d/acc %d\n", g_hostname, g_localport, time());
+            sprintf(buf, "http://%s:%d/acc %d %lf\n", g_hostname, g_localport, time(), g_avg_fitness);
             dynstring_Append(content, buf);
             /* Now add every other entry in our list */
             for(i = 0; i < numhosts; i++) {
-              sprintf(buf, "%s %d\n", hosts[i].hostname, hosts[i].time);
+              sprintf(buf, "%s %d %lf\n", hosts[i].hostname, hosts[i].time, hosts[i].fitness);
               dynstring_Append(content, buf);
             }
             MC_AclSetContent(acl, content->message);
@@ -110,7 +112,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
               updateHosts(MC_AclGetContent(acl), hosts, &numhosts);
               content = dynstring_New();
               for(i = 0; i < numhosts; i++) {
-                sprintf(buf, "%s %d\n", hosts[i].hostname, hosts[i].time);
+                sprintf(buf, "%s %d %lf\n", hosts[i].hostname, hosts[i].time, hosts[i].fitness);
                 dynstring_Append(content, buf);
               }
               reply = MC_AclReply(acl);
@@ -209,9 +211,9 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
 }
 
 /* Content format should be something like this:
-<hostname:port> <time>
-http://host.com:5050 3123124
-http://host2.com:5023 12312341
+<hostname:port> <time> <avg_fitness>
+http://host.com:5050 3123124 -2.13
+http://host2.com:5023 12312341 -3.54
 */
 void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts)
 {
@@ -228,6 +230,8 @@ void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts)
     hosts[*num_hosts].hostname = strdup(pch);
     pch = strtok_r(NULL, " \n", &saveptr);
     sscanf(pch, "%d", &hosts[*num_hosts].time);
+    pch = strtok_r(NULL, " \n", &saveptr);
+    sscanf(pch, "%lf", &hosts[*num_hosts].fitness);
     pch = strtok_r(NULL, " \n", &saveptr);
     (*num_hosts)++;
   }

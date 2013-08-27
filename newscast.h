@@ -6,7 +6,10 @@ typedef struct newscasthostinfo_s
 {
   char* hostname;
   int time;
+  double fitness;
 } newscasthostinfo_t;
+
+extern double g_avg_fitness;
 
 void* newscastAgentFunc(stationary_agent_info_t* arg);
 void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts);
