@@ -14,7 +14,7 @@
 
 #define AGENT_POPULATION 20
 #define GENE_SIZE 120
-#define NUM_GENERATIONS 100
+#define NUM_GENERATIONS 20
 
 typedef struct AgentInfo_s {
   char* name;

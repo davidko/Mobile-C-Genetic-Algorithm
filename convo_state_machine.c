@@ -114,6 +114,23 @@ void agent_info_destroy(agent_info_t* agent_info)
 
 /* State machine actions */
 
+void terminate(void)
+{
+  int i;
+  /* End all conversations */
+  convo_state_t* iter, *next;
+  while(iter != NULL) {
+    next = iter->next;
+    convo_state_destroy(iter);
+    iter = next;
+  }
+  /* Destroy all agent_info entries */
+  for(i = 0; i < g_num_agent_info_entries; i++) {
+    agent_info_destroy(g_agent_info_entries[i]);
+  }
+  free(g_agent_info_entries);
+}
+
 /* Idle convo receives "Request Mate" event */
 int action_s0_e0(convo_state_t* state)
 {
@@ -161,7 +178,7 @@ int action_s0_e0(convo_state_t* state)
     reply = mc_AclReply(state->acl);
     mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
     mc_AclSetPerformative(reply, FIPA_INFORM);
-    buf = malloc(GENE_SIZE*20);
+    buf = malloc(GENE_SIZE*20*2);
     buf[0] = '\0';
     sprintf(buf, "GENE ");
     for(i = 0; i < GENE_SIZE; i++) {
@@ -248,7 +265,8 @@ int action_s0_e8(convo_state_t* state)
 /* Got a request to terminate. Just terminate */
 int action_s0_e9(convo_state_t* state)
 {
-  exit(0);
+  terminate();
+  return -2;
 }
 
 /* Requested mate, received affirmative. Now we must wait for genes. */
@@ -278,7 +296,8 @@ int action_s1_e3(convo_state_t* state)
 /* Got a request to terminate. Just terminate */
 int action_s1_e9(convo_state_t* state)
 {
-  exit(0);
+  terminate();
+  return -2;
 }
 
 /* Waiting for gene, timed out. */
@@ -309,7 +328,7 @@ int action_s2_e4(convo_state_t* state)
   fipa_acl_message_t* message = mc_AclNew();
   mc_AclSetPerformative(message, FIPA_REQUEST);
   char *buf;
-  buf = malloc(20 * GENE_SIZE);
+  buf = malloc(20 * GENE_SIZE*2);
   char tmp[40];
   sprintf(buf, "%d", rand());
   mc_AclSetConversationID(message, buf);
@@ -331,7 +350,8 @@ int action_s2_e4(convo_state_t* state)
 /* Got a request to terminate. Just terminate */
 int action_s2_e9(convo_state_t* state)
 {
-  exit(0);
+  terminate();
+  return -2;
 }
 
 /* Waiting for an agent list, received an agent list */
@@ -347,6 +367,7 @@ int action_s3_e6(convo_state_t* state)
   /* If there are less than 10 agents on the server, just terminate the convo. */
   sscanf(content, "%*s %d", &num_agents);
   if(num_agents < 5) {
+    free(content);
     return 1;
   } else {
     /* Reset our original list of fitnesses */
@@ -389,7 +410,8 @@ int action_s3_e6(convo_state_t* state)
 /* Got a request to terminate. Just terminate */
 int action_s3_e9(convo_state_t* state)
 {
-  exit(0);
+  terminate();
+  return -2;
 }
 
 /* Waiting period before mate selection has passed. Now we must select from
@@ -429,7 +451,8 @@ int action_s4_e3(convo_state_t* state)
 /* Got a request to terminate. Just terminate */
 int action_s4_e9(convo_state_t* state)
 {
-  exit(0);
+  terminate();
+  return -2;
 }
 
 int action_handle_error(convo_state_t* state) 

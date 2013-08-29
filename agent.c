@@ -24,6 +24,7 @@ int g_num_rejects;
 
 int main()
 {
+  int rc;
   int i;
   const void* data;
   convo_state_t* convo_iter;
@@ -104,7 +105,11 @@ int main()
       if(event < 0) {
         printf("ERROR: Invalid event. Message was: %s\n",  mc_AclGetContent(message));
       }
-      if(state_table[convo_iter->cur_state][event](convo_iter))
+      rc = state_table[convo_iter->cur_state][event](convo_iter); 
+      if(rc == -2)
+      {
+        return 0;
+      } else if (rc)
       {
         /* Destroy and remove the convo */
         remove_convo(&g_convo_state_head, convo_iter);
