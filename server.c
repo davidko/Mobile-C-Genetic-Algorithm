@@ -12,9 +12,9 @@
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
-#define AGENT_POPULATION 20
+#define AGENT_POPULATION 75
 #define GENE_SIZE 120
-#define NUM_GENERATIONS 20
+#define NUM_GENERATIONS 720
 
 typedef struct AgentInfo_s {
   char* name;
@@ -49,6 +49,8 @@ double gene[GENE_SIZE];
 int gene_flag;
 
 double points[20][2];
+
+int g_numsims = 0;
 
 MCAgency_t agency;
 
@@ -117,7 +119,7 @@ int main(int argc, char* argv[])
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
 
   /* Start some agents */
-  for(i = 0; i < 10; i++) {
+  for(i = 0; i < 50; i++) {
     startAgent(agency);
     usleep(500000);
   }
@@ -139,7 +141,8 @@ int main(int argc, char* argv[])
     }
     avgfitness /= (double)num_agents;
     g_avg_fitness = avgfitness;
-    fprintf(logfile, "%d %d %lf %lf %lf\n", j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness);
+    fprintf(logfile, "%d %d %lf %lf %lf %d\n", 
+        j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness, g_numsims);
     fflush(logfile);
     free(agentList);
     j++;
@@ -186,6 +189,7 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
   sprintf(buf, "http://%s:%d/acc", g_hostname, g_localport);
   while(1) {
     sleep(2);
+    MC_HaltAgency(agency);
     composeSortedAgentList(agency, &agentList, &numAgents);
     if(numAgents > AGENT_POPULATION) {
       /* Terminate the end of the list */
@@ -203,6 +207,7 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
       }
     }
     free(agentList);
+    MC_ResumeAgency(agency);
   }
 }
 
@@ -338,6 +343,7 @@ EXPORTCH double cost_chdl(void* varg)
   sprintf(buf, "LD_LIBRARY_PATH=/usr/lib/panda3d ../MobotGA/main --disable-graphics --load-coefs %s > %s",
       tmpfilename, outputfilename);
   system(buf);
+  g_numsims++;
   fp = fopen(outputfilename, "r");
   if(fp == NULL) {
     fprintf(stderr, "WARNING: Could not open temporary file: %s\n", outputfilename);
@@ -360,7 +366,7 @@ EXPORTCH double cost_chdl(void* varg)
     lowest_gene = retval;
     fp = fopen("lowest_gene.txt", "w");
     for(i = 0; i < GENE_SIZE; i++) {
-      fprintf(fp, "%lf\n", gene[i]);
+      fprintf(fp, "%d\n", (int)gene[i]);
     }
     fclose(fp);
   }
@@ -399,7 +405,7 @@ int handleRequest(fipa_acl_message_t* acl)
     for(i = 0; i < GENE_SIZE; i++) {
       if(!gene_flag) {
         //gene[i] = (double) (rand() % 100) - 50;
-        gene[i] = (double)rand()/(double)RAND_MAX * 5.0;
+        gene[i] = (double)rand()/(double)RAND_MAX * 128;
       }
       sprintf(buf, "%lf", gene[i]);
       strcat(geneStr, buf);
