@@ -405,9 +405,9 @@ int handleRequest(fipa_acl_message_t* acl)
     for(i = 0; i < GENE_SIZE; i++) {
       if(!gene_flag) {
         //gene[i] = (double) (rand() % 100) - 50;
-        gene[i] = (double)rand()/(double)RAND_MAX * 128;
+        gene[i] = (double)rand()/(double)RAND_MAX * 256;
       }
-      sprintf(buf, "%lf", gene[i]);
+      sprintf(buf, "%d", (int)gene[i]);
       strcat(geneStr, buf);
       strcat(geneStr, " ");
     }
