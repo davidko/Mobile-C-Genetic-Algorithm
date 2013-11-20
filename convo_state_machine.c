@@ -363,13 +363,15 @@ int action_s3_e6(convo_state_t* state)
   char* agent_name;
   int i;
   char buf[80];
+  char** agent_names;
   content = strdup(mc_AclGetContent(state->acl));
   /* If there are less than 10 agents on the server, just terminate the convo. */
   sscanf(content, "%*s %d", &num_agents);
-  if(num_agents < 5) {
+  if(num_agents < 10) {
     free(content);
     return 1;
   } else {
+    agent_names = (char**)malloc((num_agents*2)*sizeof(char*));
     /* Reset our original list of fitnesses */
     for(i = 0; i < g_num_agent_info_entries; i++) {
       agent_info_destroy(g_agent_info_entries[i]);
@@ -381,9 +383,21 @@ int action_s3_e6(convo_state_t* state)
     strtok(NULL, " ");
     strtok(NULL, " ");
     agent_name = strtok(NULL, " ");
+    for(i = 0; agent_name != NULL && i < num_agents; i++) {
+      printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+      agent_names[i] = agent_name;
+      printf("--------------------------------------------------\n");
+      agent_name = strtok(NULL, " ");
+    }
     /* Form and send the message */
     fipa_acl_message_t* message;
-    for(i = 0; i < 5 && agent_name != NULL; i++) {
+    int offset = rand();
+    for(i = 0; i < 8 ; i++) {
+      printf("Send REQUEST_FITNESS\n");
+      printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+      agent_name = agent_names[(offset+i)%num_agents];
+      if(agent_name == NULL) {continue;}
+      printf("--------------------------------------------------\n");
       sprintf(buf, "%d", rand());
       message = mc_AclNew();
       mc_AclSetSender(message, mc_agent_name, mc_agent_address);
@@ -393,14 +407,14 @@ int action_s3_e6(convo_state_t* state)
       mc_AclSetContent(message, "REQUEST_FITNESS");
       mc_AclSend(message);
       mc_AclDestroy(message);
-      agent_name = strtok(NULL, " ");
     }
     free(content);
+    free(agent_names);
 
     /* Set up a state to begin mating process in some time */
     convo_state_t* state = convo_state_new("meh");
     state->cur_state = STATE_WAIT_FOR_INIT_MATE;
-    state->timeout = AGENT_RESPONSE_WAIT_TIME;
+    state->timeout = 30;
     insert_convo(&g_convo_state_head, state);
   }
   DEBUGMSG;
@@ -499,7 +513,7 @@ void init_mate_proposal(const char* name)
   convo_state_t* convo;
   convo = convo_state_new(buf);
   convo->cur_state = STATE_REQUESTED_MATE;
-  convo->timeout = 5;
+  convo->timeout = AGENT_RESPONSE_WAIT_TIME;
   insert_convo(&g_convo_state_head, convo);
   fipa_acl_message_t* msg;
   msg = mc_AclNew();

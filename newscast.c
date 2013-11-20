@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 #include "server.h"
 #include "newscast.h"
 #include <dynstring.h>
@@ -80,7 +82,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
             MC_AclAddReceiver(acl, "newscast", cptr);
             content = dynstring_New();
             /* First, add ourself */
-            sprintf(buf, "http://%s:%d/acc %d %lf\n", g_hostname, g_localport, time(), g_avg_fitness);
+            sprintf(buf, "http://%s:%d/acc %d %lf\n", g_hostname, g_localport, time(NULL), g_avg_fitness);
             dynstring_Append(content, buf);
             /* Now add every other entry in our list */
             for(i = 0; i < numhosts; i++) {

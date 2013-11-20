@@ -9,6 +9,8 @@
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
+#define CONVO_TIMEOUT 180
+
 int age = 0;
 
 int mate_attempts = 0;
@@ -98,7 +100,7 @@ int main()
         /* New Conversation */
         convo_iter = convo_state_new(mc_AclGetConversationID(message));
         convo_iter->acl = message;
-        convo_iter->timeout = 60;
+        convo_iter->timeout = CONVO_TIMEOUT;
         insert_convo(&g_convo_state_head, convo_iter);
       } 
       
@@ -138,7 +140,7 @@ int main()
     if(g_convo_state_head == NULL && (double)rand()/(double)RAND_MAX < 0.1) {
       sprintf(buf, "%d", rand());
       convo_iter = convo_state_new(buf);
-      convo_iter->timeout = 30;
+      convo_iter->timeout = CONVO_TIMEOUT;
       convo_iter->cur_state = STATE_WAIT_FOR_AGENT_LIST;
       insert_convo(&g_convo_state_head, convo_iter);
       message = mc_AclNew();

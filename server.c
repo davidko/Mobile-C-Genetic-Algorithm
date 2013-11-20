@@ -14,7 +14,7 @@
 
 #define AGENT_POPULATION 75
 #define GENE_SIZE 120
-#define NUM_GENERATIONS 720
+#define NUM_GENERATIONS 7200
 
 typedef struct AgentInfo_s {
   char* name;
@@ -230,7 +230,6 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
       free(name);
       continue;
     }
-    printf("Get fitness from agent %s\n", name);
     MC_AgentDataShare_Retrieve(agents[i], "fitness", (void**)&fitness, &size);
     if(fitness == NULL) {
       continue;
@@ -332,7 +331,7 @@ EXPORTCH double cost_chdl(void* varg)
     return 0;
   }
   for(i = 0; i < GENE_SIZE; i++) {
-    fprintf(fp, "%lf\n", gene[i]);
+    fprintf(fp, "%.0lf\n", gene[i]);
   }
   fclose(fp);
   /* Run the simulation program */
