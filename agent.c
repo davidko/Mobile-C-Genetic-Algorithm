@@ -70,6 +70,7 @@ int main()
   } else {
     memcpy(gene, data, sizeof(double)*GENE_SIZE);
     g_fitness = costFunction(gene);
+    mc_AgentVariableSave(mc_current_agent, "g_fitness");
   }
 
   g_num_agent_info_entries = 0;
