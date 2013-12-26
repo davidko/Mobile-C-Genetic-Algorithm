@@ -62,7 +62,7 @@ int main()
     i = rand();
     sprintf(buf, "%d", i);
     mc_AclSetConversationID(message, buf);
-    mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+    mc_AclSetSender(message, mc_agent_name, "localhost");
     mc_AclAddReceiver(message, "master", NULL);
     mc_AclSetContent(message, "REQUEST_GENE");
     mc_AclSend(message);
@@ -146,7 +146,7 @@ int main()
       message = mc_AclNew();
       mc_AclSetPerformative(message, FIPA_REQUEST);
       mc_AclSetConversationID(message, buf);
-      mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+      mc_AclSetSender(message, mc_agent_name, "localhost");
       mc_AclAddReceiver(message, "master", NULL);
       mc_AclSetContent(message, "REQUEST_AGENTS");
       mc_AclSend(message);
