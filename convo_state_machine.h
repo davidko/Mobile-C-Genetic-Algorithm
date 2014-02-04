@@ -17,6 +17,7 @@
 #define PROBABILITY_MATE_SUPERIOR 0.75
 #define PROBABILITY_MATE_INFERIOR 0.25
 #define AGENT_RESPONSE_WAIT_TIME 180
+  
 enum states {
   STATE_IDLE,           /* 0  */
   STATE_REQUESTED_MATE, /* 1  */
@@ -46,6 +47,8 @@ typedef struct convo_state_s {
   fipa_acl_message_t* acl; /* Last received ACL message */
   struct convo_state_s* next; /* This is a linked list */
 } convo_state_t ;
+
+void* mymalloc(size_t size, const char* file, int line);
 
 convo_state_t* convo_state_new(const char* convo_id);
 void convo_state_destroy(convo_state_t* convo);

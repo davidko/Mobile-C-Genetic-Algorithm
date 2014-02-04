@@ -24,6 +24,11 @@ int g_num_agent_info_entries;
 
 int g_num_rejects;
 
+void* mymalloc(size_t size, const char* file, int line) {
+  printf("MALLOC %d at %s:%d\n", size, file, line);
+  return malloc(size);
+}
+
 int main()
 {
   int rc;
@@ -34,7 +39,7 @@ int main()
   fipa_acl_message_t* message;
   int event;
   char buf[80];
-  g_agent_info_entries = (agent_info_t**)malloc(sizeof(agent_info_t*)*20);
+  g_agent_info_entries = (agent_info_t**)mymalloc(sizeof(agent_info_t*)*80, __FILE__, __LINE__);
   /* Get the saved variables */
   data = mc_AgentVariableRetrieve(
       mc_current_agent, "age", 0); 

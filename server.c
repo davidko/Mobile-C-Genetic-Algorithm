@@ -12,7 +12,7 @@
 #define MATCH_CMD(str, cmd) \
   if (!strncmp(str, cmd, strlen(cmd)))
 
-#define AGENT_POPULATION 75
+#define AGENT_POPULATION 40
 #define GENE_SIZE 120
 #define NUM_GENERATIONS 7200
 
@@ -36,7 +36,7 @@ int handleRequest(fipa_acl_message_t* acl);
 pthread_mutex_t callback_lock;
 pthread_cond_t callback_cond;
 int callback_num_instances = 0;
-#define CALLBACK_MAX_INSTANCES 8
+#define CALLBACK_MAX_INSTANCES 2
 
 /* When an agent requests a reproduction, it will send a message to the server
  * saying it wants to create a child with a certain gene. The server will then
@@ -133,6 +133,9 @@ int main(int argc, char* argv[])
    * agents so that we have a standing population of 30 agents. */
     sleep(5);
     composeSortedAgentList(agency, &agentList, &num_agents);
+    if (num_agents < 5) {
+      continue;
+    }	
     /* Calculate avg fitness */
     int i;
     double avgfitness = 0;
@@ -146,9 +149,11 @@ int main(int argc, char* argv[])
     fflush(logfile);
     free(agentList);
     j++;
+    /*
     if(j == NUM_GENERATIONS) {
       exit(0);
     }
+    */
   }
 
   MC_End(agency);
@@ -206,6 +211,9 @@ void* cullAgentFunc(stationary_agent_info_t* agent_info)
         MC_AclDestroy(msg);
       }
     }
+    for(i = 0; i < numAgents; i++) {
+      free(agentList[i].name);
+    }
     free(agentList);
     MC_ResumeAgency(agency);
   }
@@ -218,6 +226,7 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
   char* name;
   double* fitness;
   size_t size;
+  MC_AgentProcessingBegin(agency);
   MC_GetAllAgents(agency, &agents, &num);
   *agentList = (AgentInfo_t*)malloc(sizeof(AgentInfo_t)*(num+10));
   j = 0;
@@ -240,6 +249,7 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
     j++;
   }
   *numAgents = j;
+  MC_AgentProcessingEnd(agency);
 
   /* Lets go ahead and sort the agent list here */
   if(*numAgents > 0) 
@@ -423,6 +433,7 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclSetPerformative(reply, FIPA_INFORM);
     sprintf(buf, "http://%s:%d/acc", g_hostname, g_localport);
     MC_AclSetSender(reply, "master", buf);
+    MC_AgentProcessingBegin(agency);
     MC_GetAllAgents(agency, &agents, &num_agents);
     agent_list = (char*)malloc(20 * num_agents);
     *agent_list = '\0';
@@ -444,6 +455,7 @@ int handleRequest(fipa_acl_message_t* acl)
     }
     MC_AclSetContent(reply, agent_list);
     MC_AclSend(agency, reply);
+    MC_AgentProcessingEnd(agency);
     free(agent_list);
     MC_AclDestroy(reply);
   } else

@@ -42,7 +42,7 @@ void init_convo_state_machine()
 convo_state_t* convo_state_new(const char* convo_id)
 {
   convo_state_t* convo;
-  convo = (convo_state_t*)malloc(sizeof(convo_state_t));
+  convo = (convo_state_t*)mymalloc(sizeof(convo_state_t), __FILE__, __LINE__);
   convo->convo_id = strdup(convo_id);
   convo->cur_state = 0;
   convo->time_last_action = time(NULL);
@@ -98,7 +98,7 @@ int remove_convo(convo_state_t** head, convo_state_t* node)
 
 agent_info_t* agent_info_new(const char* name, double fitness)
 {
-  agent_info_t* info = (agent_info_t*)malloc(sizeof(agent_info_t));
+  agent_info_t* info = (agent_info_t*)mymalloc(sizeof(agent_info_t), __FILE__, __LINE__);
   info->name = strdup(name);
   info->fitness = fitness;
   return info;
@@ -159,9 +159,8 @@ int action_s0_e0(convo_state_t* state)
       mate_flag = 0;
     }
   }
-  printf("Reply 0x%x at %s:%d\n", state->acl, __FILE__, __LINE__);
   fipa_acl_message_t* reply = mc_AclReply(state->acl);
-  mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
+  mc_AclSetSender(reply, mc_agent_name, "localhost");
   if(mate_flag) {
     mc_AclSetPerformative(reply, FIPA_AGREE);
     mc_AclSetContent(reply, "YES");
@@ -174,11 +173,10 @@ int action_s0_e0(convo_state_t* state)
 
   /* If replied with "YES", also send the gene */
   if(mate_flag) {
-  printf("Reply 0x%x at %s:%d\n", state->acl, __FILE__, __LINE__);
     reply = mc_AclReply(state->acl);
-    mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
+    mc_AclSetSender(reply, mc_agent_name, "localhost");
     mc_AclSetPerformative(reply, FIPA_INFORM);
-    buf = malloc(GENE_SIZE*20*2);
+    buf = mymalloc(GENE_SIZE*20*2, __FILE__, __LINE__);
     buf[0] = '\0';
     sprintf(buf, "GENE ");
     for(i = 0; i < GENE_SIZE; i++) {
@@ -217,13 +215,16 @@ int action_s0_e4(convo_state_t* state)
     tok = strtok(NULL, " ");
   }
   g_fitness = costFunction(gene);
+  mc_AgentVariableSave(mc_current_agent, "g_fitness");
   /* Publish the fitness */
   mc_AgentDataShare_Add(mc_current_agent, "fitness", &g_fitness, sizeof(g_fitness));
+/*
   printf("Agent received genes of fitness %le ", g_fitness);
   for(i = 0; i < GENE_SIZE; i++) {
     printf("%lf ", gene[i]);
   }
   printf("\n");
+*/
   free(str);
   DEBUGMSG;
   return 1;
@@ -235,7 +236,7 @@ int action_s0_e7(convo_state_t* state)
   DEBUGMSG;
   char buf[160];
   fipa_acl_message_t* reply = mc_AclReply(state->acl);
-  mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
+  mc_AclSetSender(reply, mc_agent_name, "localhost");
   mc_AclSetPerformative(reply, FIPA_INFORM);
   sprintf(buf, "FITNESS %le", g_fitness);
   mc_AclSetContent(reply, buf);
@@ -328,11 +329,11 @@ int action_s2_e4(convo_state_t* state)
   fipa_acl_message_t* message = mc_AclNew();
   mc_AclSetPerformative(message, FIPA_REQUEST);
   char *buf;
-  buf = malloc(20 * GENE_SIZE*2);
+  buf = mymalloc(20 * GENE_SIZE*2, __FILE__, __LINE__);
   char tmp[40];
   sprintf(buf, "%d", rand());
   mc_AclSetConversationID(message, buf);
-  mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+  mc_AclSetSender(message, mc_agent_name, "localhost");
   mc_AclAddReceiver(message, "master", NULL);
   sprintf(buf, "REQUEST_CHILD ");
   for(i = 0; i < GENE_SIZE; i++) {
@@ -371,7 +372,7 @@ int action_s3_e6(convo_state_t* state)
     free(content);
     return 1;
   } else {
-    agent_names = (char**)malloc((num_agents*2)*sizeof(char*));
+    agent_names = (char**)mymalloc((num_agents*2)*sizeof(char*), __FILE__, __LINE__);
     /* Reset our original list of fitnesses */
     for(i = 0; i < g_num_agent_info_entries; i++) {
       agent_info_destroy(g_agent_info_entries[i]);
@@ -384,23 +385,18 @@ int action_s3_e6(convo_state_t* state)
     strtok(NULL, " ");
     agent_name = strtok(NULL, " ");
     for(i = 0; agent_name != NULL && i < num_agents; i++) {
-      printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
       agent_names[i] = agent_name;
-      printf("--------------------------------------------------\n");
       agent_name = strtok(NULL, " ");
     }
     /* Form and send the message */
     fipa_acl_message_t* message;
     int offset = rand();
     for(i = 0; i < 8 ; i++) {
-      printf("Send REQUEST_FITNESS\n");
-      printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
       agent_name = agent_names[(offset+i)%num_agents];
       if(agent_name == NULL) {continue;}
-      printf("--------------------------------------------------\n");
       sprintf(buf, "%d", rand());
       message = mc_AclNew();
-      mc_AclSetSender(message, mc_agent_name, mc_agent_address);
+      mc_AclSetSender(message, mc_agent_name, "localhost");
       mc_AclSetPerformative(message, FIPA_REQUEST);
       mc_AclAddReceiver(message, agent_name, NULL);
       mc_AclSetConversationID(message, buf);
@@ -482,7 +478,7 @@ int action_invoke_error(convo_state_t* state)
   if(state->acl != NULL) {
     reply = mc_AclReply(state->acl);
     mc_AclSetPerformative(reply, FIPA_FAILURE);
-    mc_AclSetSender(reply, mc_agent_name, mc_agent_address);
+    mc_AclSetSender(reply, mc_agent_name, "localhost");
     mc_AclSetContent(reply, "ERROR");
     mc_AclSend(reply);
     mc_AclDestroy(reply);
@@ -517,7 +513,7 @@ void init_mate_proposal(const char* name)
   insert_convo(&g_convo_state_head, convo);
   fipa_acl_message_t* msg;
   msg = mc_AclNew();
-  mc_AclSetSender(msg, mc_agent_name, mc_agent_address);
+  mc_AclSetSender(msg, mc_agent_name, "localhost");
   mc_AclAddReceiver(msg, name, NULL);
   mc_AclSetPerformative(msg, FIPA_REQUEST);
   mc_AclSetConversationID(msg, buf);
