@@ -218,6 +218,8 @@ int action_s0_e4(convo_state_t* state)
   mc_AgentVariableSave(mc_current_agent, "g_fitness");
   /* Publish the fitness */
   mc_AgentDataShare_Add(mc_current_agent, "fitness", &g_fitness, sizeof(g_fitness));
+  /* Save my fitness to a logfile */
+  
 /*
   printf("Agent received genes of fitness %le ", g_fitness);
   for(i = 0; i < GENE_SIZE; i++) {

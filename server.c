@@ -16,6 +16,9 @@
 #define GENE_SIZE 120
 #define NUM_GENERATIONS 7200
 
+#define QSORT_MUTEX 875
+#define TMPFILE_MUTEX 324
+
 typedef struct AgentInfo_s {
   char* name;
   double fitness;
@@ -52,6 +55,8 @@ double points[20][2];
 
 int g_numsims = 0;
 
+char g_logdir[128];
+
 MCAgency_t agency;
 
 stationary_agent_info_t* g_master_agent;
@@ -66,11 +71,26 @@ int g_localport;
 
 int main(int argc, char* argv[]) 
 {
+  int rc;
+
   if(argc != 3 && argc != 4) {
     printf("Command format: %s <local_hostname> <port> [newscast_seed]\n", argv[0]);
     printf("newscast_seed should be something like http://192.168.1.101:5050/acc\n");
     exit(0);
   }
+
+  /* Prepare the log directory */
+  time_t rawtime;
+  struct tm* timeinfo;
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  strftime(g_logdir, sizeof(g_logdir), "logfiles_%F-%H%M", timeinfo);
+  rc = mkdir(g_logdir, 0755);
+  if(rc) {
+    fprintf(stderr, "Error creating logfile directory.\n");
+    exit(-1);
+  }
+
   g_hostname = malloc(200);
   strcpy(g_hostname, argv[1]);
   int local_port;
@@ -105,7 +125,8 @@ int main(int argc, char* argv[])
   MC_AddAgentInitCallback(agency, agentCallbackFunc, NULL);
 
   /* Add qsort mutex */
-  MC_SyncInit(agency, 875);
+  MC_SyncInit(agency, QSORT_MUTEX);
+  MC_SyncInit(agency, TMPFILE_MUTEX);
 
   /* Start the newscast agent */
   if(argc == 4) {
@@ -126,7 +147,9 @@ int main(int argc, char* argv[])
 
   AgentInfo_t *agentList;
   FILE *logfile;
-  logfile = fopen("logfile.txt", "w");
+  char logfilename[128];
+  sprintf(logfilename, "%s/logfile.txt", g_logdir);
+  logfile = fopen(logfilename, "w");
   int j = 0;
   while(1) {
   /* Every five seconds or so, get a list of all the agents and kill enough
@@ -291,6 +314,8 @@ int startAgent(MCAgency_t agency)
       NULL,
       buf,
       0);
+
+  MC_AgentDataShare_Add(agent, "logfile_dir", g_logdir, strlen(g_logdir)+1);
 
   printf("Starting agent...\n");  
   MC_AddAgent(agency, agent);

@@ -11,6 +11,8 @@
 
 #define CONVO_TIMEOUT 180
 
+#define TMPFILE_MUTEX 324
+
 int age = 0;
 
 int mate_attempts = 0;
@@ -28,6 +30,8 @@ void* mymalloc(size_t size, const char* file, int line) {
   printf("MALLOC %d at %s:%d\n", size, file, line);
   return malloc(size);
 }
+
+char *g_logfile;
 
 int main()
 {
@@ -76,6 +80,25 @@ int main()
     memcpy(gene, data, sizeof(double)*GENE_SIZE);
     g_fitness = costFunction(gene);
     mc_AgentVariableSave(mc_current_agent, "g_fitness");
+  }
+
+  /* Print stats to logfile */
+  size_t size;
+  rc = mc_AgentDataShare_Retrieve(mc_current_agent, "logfile_dir", &g_logfile, &size);
+  if(rc) {
+    fprintf(stderr, "Error retrieving logfile directory.\n");
+    exit(-1);
+  }
+  FILE *fp;
+  char tmpfilename[128];
+  sprintf(tmpfilename, "%s/%d_%s", g_logfile, time(NULL), mc_agent_name);
+  fp = fopen(tmpfilename, "w");
+  if(fp != NULL) {
+    for(i = 0; i < GENE_SIZE; i++) {
+      fprintf(fp, "%lf\n", gene[i]);
+    }
+    fprintf(fp, "%lf\n", g_fitness);
+    fclose(fp);
   }
 
   g_num_agent_info_entries = 0;
