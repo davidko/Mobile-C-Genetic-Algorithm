@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
   struct tm* timeinfo;
   time(&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(g_logdir, sizeof(g_logdir), "logfiles_%F-%H%M", timeinfo);
+  strftime(g_logdir, sizeof(g_logdir), "logfiles_%F-%H%M.%S", timeinfo);
   rc = mkdir(g_logdir, 0755);
   if(rc) {
     fprintf(stderr, "Error creating logfile directory.\n");
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
   MC_AddStationaryAgent(agency, cullAgentFunc, "cullAgent", NULL);
 
   /* Start some agents */
-  for(i = 0; i < 50; i++) {
+  for(i = 0; i < AGENT_POPULATION; i++) {
     startAgent(agency);
     usleep(500000);
   }
@@ -315,8 +315,6 @@ int startAgent(MCAgency_t agency)
       buf,
       0);
 
-  MC_AgentDataShare_Add(agent, "logfile_dir", g_logdir, strlen(g_logdir)+1);
-
   printf("Starting agent...\n");  
   MC_AddAgent(agency, agent);
   return 0;
@@ -328,6 +326,7 @@ int startAgent(MCAgency_t agency)
 int agentCallbackFunc(ChInterp_t interp, MCAgent_t agent, void* user_data)
 {
   Ch_DeclareFunc(interp, "double costFunction(double *x);", (ChFuncdl_t)cost_chdl);
+  MC_AgentDataShare_Add(agent, "logfile_dir", g_logdir, strlen(g_logdir)+1);
   return 0; /* 0 for success error status */
 }
 

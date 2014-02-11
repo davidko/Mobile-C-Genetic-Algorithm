@@ -1,5 +1,6 @@
 #include "convo_state_machine.h"
 
+void saveLogFile();
 extern double gene[GENE_SIZE]; /* Global agent gene */
 
 int get_gene_from_content(double gene[GENE_SIZE], const char* content);
@@ -219,7 +220,7 @@ int action_s0_e4(convo_state_t* state)
   /* Publish the fitness */
   mc_AgentDataShare_Add(mc_current_agent, "fitness", &g_fitness, sizeof(g_fitness));
   /* Save my fitness to a logfile */
-  
+  saveLogFile();
 /*
   printf("Agent received genes of fitness %le ", g_fitness);
   for(i = 0; i < GENE_SIZE; i++) {
