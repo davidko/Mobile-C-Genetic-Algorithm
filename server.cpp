@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <math.h>
+#include <sys/stat.h>
 
 #include "newscast.h"
 
@@ -91,7 +92,7 @@ int main(int argc, char* argv[])
     exit(-1);
   }
 
-  g_hostname = malloc(200);
+  g_hostname = new char[200];
   strcpy(g_hostname, argv[1]);
   int local_port;
   sscanf(argv[2], "%d", &local_port);
@@ -423,7 +424,7 @@ int handleRequest(fipa_acl_message_t* acl)
   char* agent_name;
   fipa_acl_message_t* reply;
   if(geneStr == NULL) {
-    geneStr = malloc(20 * GENE_SIZE);
+    geneStr = new char[20 * GENE_SIZE];
   }
   content = MC_AclGetContent(acl);
   if(content == NULL) {
