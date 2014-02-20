@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <sstream>
+#include <queue>
+#include "gene.h"
 
 #include "newscast.h"
 
@@ -49,8 +52,8 @@ int callback_num_instances = 0;
  * which time the server will provide the following gene, and unset the flag.
  * If an agent asks for a gene and the flag is not set, the server will create
  * a random gene. */
-double gene[GENE_SIZE];
-int gene_flag;
+
+std::queue<Gene*> g_geneQueue;
 
 double points[20][2];
 
@@ -100,7 +103,6 @@ int main(int argc, char* argv[])
 
   MCAgencyOptions_t options;
   int i;
-  gene_flag = 0;
   double *point = &(points[0][0]);
   MCAgent_t agent;
   MCAgent_t *agents;
@@ -413,7 +415,7 @@ EXPORTCH double cost_chdl(void* varg)
 int handleRequest(fipa_acl_message_t* acl)
 {
   const char* content;
-  static char *geneStr = NULL;
+  std::string geneStr;
   char buf[128];
   char *tmp;
   char *saveptr;
@@ -423,9 +425,6 @@ int handleRequest(fipa_acl_message_t* acl)
   char* agent_list;
   char* agent_name;
   fipa_acl_message_t* reply;
-  if(geneStr == NULL) {
-    geneStr = new char[20 * GENE_SIZE];
-  }
   content = MC_AclGetContent(acl);
   if(content == NULL) {
     return -1;
@@ -435,18 +434,20 @@ int handleRequest(fipa_acl_message_t* acl)
     reply = MC_AclReply(acl);
     MC_AclSetPerformative(reply, FIPA_INFORM);
     /* Create the gene */
-    sprintf(geneStr, "GENE ");
-    for(i = 0; i < GENE_SIZE; i++) {
-      if(!gene_flag) {
-        //gene[i] = (double) (rand() % 100) - 50;
-        gene[i] = (double)rand()/(double)RAND_MAX * 256;
+    geneStr = "GENE ";
+    if(g_geneQueue.size() > 0) {
+      geneStr += g_geneQueue.front()->str();
+      g_geneQueue.pop();
+    } else {
+      std::ostringstream strm;
+      for(i = 0; i < GENE_SIZE; i++) {
+        double gene;
+        gene = (double)rand()/(double)RAND_MAX * 256;
+        strm << gene << ' ';
       }
-      sprintf(buf, "%d", (int)gene[i]);
-      strcat(geneStr, buf);
-      strcat(geneStr, " ");
+      geneStr += strm.str();
     }
-    gene_flag = 0;
-    MC_AclSetContent(reply, geneStr);
+    MC_AclSetContent(reply, geneStr.c_str());
     sprintf(buf, "http://%s:%d/acc", g_hostname, g_localport);
     MC_AclSetSender(reply, "master", buf);
     MC_AclSend(agency, reply);
@@ -485,15 +486,13 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclDestroy(reply);
   } else
   MATCH_CMD(content, "REQUEST_CHILD") {
-    strcpy(geneStr, content + strlen("REQUEST_CHILD"));
-    tmp = strtok_r(geneStr, " \t", &saveptr);
-    i = 0;
-    while(tmp != NULL && i < GENE_SIZE) {
-      sscanf(tmp, "%lf", &gene[i]);
-      tmp = strtok_r(NULL, " \t", &saveptr);
-      i++;
+    std::istringstream iss(content+strlen("REQUEST_CHILD "));
+    double value;
+    int values[GENE_SIZE];
+    for(i = 0; iss >> value; i++) {
+      values[i] = value;
     }
-    gene_flag = 1;
+    g_geneQueue.push(new Gene(values, GENE_SIZE));
     /* Add a new agent */
     /* If there are too many cost-functions running already, cancel starting the new agent. */
     pthread_mutex_lock(&callback_lock);
