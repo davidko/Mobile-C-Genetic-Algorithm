@@ -37,7 +37,7 @@ std::string Gene::str()
   std::ostringstream stream;
   int i;
   for(i = 0; i < _size; i++) {
-    stream << _gene[i] << "\n";
+    stream << (double)_gene[i] << " ";
   }
   return stream.str();
 }
