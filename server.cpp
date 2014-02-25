@@ -161,6 +161,10 @@ int main(int argc, char* argv[])
     sleep(5);
     composeSortedAgentList(agency, &agentList, &num_agents);
     if (num_agents < 5) {
+      for(i = 0; i < num_agents; i++) {
+        free(agentList->name);
+      }
+      free(agentList);
       continue;
     }	
     /* Calculate avg fitness */
@@ -174,6 +178,9 @@ int main(int argc, char* argv[])
     fprintf(logfile, "%d %d %lf %lf %lf %d\n", 
         j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness, g_numsims);
     fflush(logfile);
+    for(i = 0; i < num_agents; i++) {
+      free(agentList->name);
+    }
     free(agentList);
     j++;
     /*
@@ -268,10 +275,12 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
     }
     MC_AgentDataShare_Retrieve(agents[i], "fitness", (void**)&fitness, &size);
     if(fitness == NULL) {
+      free(name);
       continue;
     }
     (*agentList)[j].name = name;
     (*agentList)[j].fitness = *fitness;
+    free(fitness);
 
     j++;
   }
@@ -281,6 +290,7 @@ int composeSortedAgentList(MCAgency_t agency, AgentInfo_t **agentList, int *numA
   /* Lets go ahead and sort the agent list here */
   if(*numAgents > 0) 
     qsort(*agentList, *numAgents, sizeof(AgentInfo_t),  compareAgentInfo);
+  free(agents);
   return 0;
 }
 
@@ -484,6 +494,7 @@ int handleRequest(fipa_acl_message_t* acl)
     MC_AclSend(agency, reply);
     MC_AgentProcessingEnd(agency);
     free(agent_list);
+    free(agents);
     MC_AclDestroy(reply);
   } else
   MATCH_CMD(content, "REQUEST_CHILD") {
