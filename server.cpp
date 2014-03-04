@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
     composeSortedAgentList(agency, &agentList, &num_agents);
     if (num_agents < 5) {
       for(i = 0; i < num_agents; i++) {
-        free(agentList->name);
+        free(agentList[i].name);
       }
       free(agentList);
       continue;
@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
         j, num_agents, avgfitness, agentList[0].fitness, agentList[num_agents-1].fitness, g_numsims);
     fflush(logfile);
     for(i = 0; i < num_agents; i++) {
-      free(agentList->name);
+      free(agentList[i].name);
     }
     free(agentList);
     j++;
