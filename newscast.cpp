@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include "server.h"
 #include "newscast.h"
-#include <dynstring.h>
 
 double g_avg_fitness = 0; // Current average fitness of the local agency 
 
@@ -16,17 +15,14 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
   fipa_acl_message_t* acl, *reply;
   MCAgent_t agent = MC_AgentInfo_GetAgent(arg);
   int count = 0;
-  newscasthostinfo_t* hosts = (newscasthostinfo_t*)malloc(sizeof(newscasthostinfo_t)*HOSTLIST_SIZE*3);
-  int numhosts = 0;
+  std::vector<NewscastHostInfo*> hosts;
   /* If there is a seed host, get it */
   char* seed;
   seed = MC_AgentInfo_GetAgentArgs(arg);
   if(seed) {
-    hosts[0].hostname = strdup(seed);
-    hosts[0].time = time(NULL);
-    numhosts++;
+    hosts.push_back(new NewscastHostInfo(seed, time, 0));
   }
-  dynstring_t* content;
+  std::string content;
   char buf[128];
   char last_request_convo_id[80];
   char last_request_hostname[128];
@@ -43,7 +39,7 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
         if(acl != NULL) {
           /* If we received a request, send an inform response */
           if(MC_AclGetPerformative(acl) == FIPA_REQUEST) {
-            updateHosts(MC_AclGetContent(acl), hosts, &numhosts);
+            updateHosts(MC_AclGetContent(acl), hosts);
             content = dynstring_New();
             for(i = 0; i < numhosts; i++) {
               sprintf(buf, "%s %d %lf\n", hosts[i].hostname, hosts[i].time, hosts[i].fitness);
@@ -217,35 +213,28 @@ void* newscastAgentFunc(stationary_agent_info_t* arg)
 http://host.com:5050 3123124 -2.13
 http://host2.com:5023 12312341 -3.54
 */
-void updateHosts(const char* content, std::queue<NewscastHostInfo> *hosts)
+void updateHosts(const char* content, newscasthostinfo_t* hosts, int *num_hosts)
 {
-  std::string content_(content);
-
-  std::istringstream iss (content_);
-  std::string token;
-  std::string hostname;
-  int time;
-  double fitness;
-  std::istringstream convert;
-  for(int i = 0; iss >> token; i++) {
-    switch(i%3) {
-      case 0:
-        hostname = token;
-        break;
-      case 1:
-        convert.str(token);
-        convert >> time;
-        break;
-      case 2:
-        convert.str(token);
-        convert >> fitness;
-        hosts->push_back(new NewscastHostInfo(hostname, time, fitness));
-        break;
-    }
+  char* buf = strdup(content);
+  printf("content is %s\n", content);
+  char* pch;
+  char* saveptr;
+  pch = strtok_r(buf, " \n", &saveptr);
+  while(
+      (pch != NULL) &&
+      (strlen(pch) > 0)
+      )
+  {
+    hosts[*num_hosts].hostname = strdup(pch);
+    pch = strtok_r(NULL, " \n", &saveptr);
+    sscanf(pch, "%d", &hosts[*num_hosts].time);
+    pch = strtok_r(NULL, " \n", &saveptr);
+    sscanf(pch, "%lf", &hosts[*num_hosts].fitness);
+    pch = strtok_r(NULL, " \n", &saveptr);
+    (*num_hosts)++;
   }
   /* Sort the list */
-  std::sort(hosts);
-  std::reverse(hosts->begin(), hosts->end());
+  qsort(hosts, *num_hosts, sizeof(newscasthostinfo_t), host_cmp);
 
   /* Remove duplicates */
   filter_host_duplicates(hosts, num_hosts);

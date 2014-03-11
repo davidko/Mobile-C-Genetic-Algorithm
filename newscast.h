@@ -2,11 +2,41 @@
 #define _NEWSCAST_H_
 
 #define HOSTLIST_SIZE 10
-typedef struct newscasthostinfo_s
+class NewscastHostInfo
 {
-  char* hostname;
-  int time;
-  double fitness;
+  public:
+    NewscastHostInfo(const char *hostname, int time, double fitness);
+    NewscastHostInfo(string hostname, int time, double fitness);
+
+    void hostname(const char* hostname);
+    void hostname(string hostname);
+    string hostname();
+    const char* hostname_cstr();
+
+    int time();
+    void time(int);
+
+    double fitness();
+    void fitness(double fitness);
+
+    // Overload some operators for sorting
+    inline bool operator==(const NewscastHostInfo &l, const NewscastHostInfo &r)
+    {return l.time() == r.time();}
+    inline bool operator!=(const NewscastHostInfo &l, const NewscastHostInfo &r)
+    {return !operator==(l, r);}
+    inline bool operator<(const NewscastHostInfo &l, const NewscastHostInfo &r)
+    {return l.time() < r.time();}
+    inline bool operator> (const NewscastHostInfo& lhs, const NewscastHostInfo& rhs)
+    {return  operator< (rhs,lhs);}
+    inline bool operator<=(const NewscastHostInfo& lhs, const NewscastHostInfo& rhs)
+    {return !operator> (lhs,rhs);}
+    inline bool operator>=(const NewscastHostInfo& lhs, const NewscastHostInfo& rhs)
+    {return !operator< (lhs,rhs);}
+
+  private:
+    string hostname_;
+    int time_;
+    double fitness_;
 } newscasthostinfo_t;
 
 extern double g_avg_fitness;

@@ -187,7 +187,23 @@ int main()
       mc_AclSetContent(message, "REQUEST_AGENTS");
       mc_AclSend(message);
       mc_AclDestroy(message);
-      printf("Find mates!\n");
+    }
+    /* If there are no currently proceeding convos, have a 1% chance to migrate */
+    if(g_convo_state_head == NULL && (double)rand()/(double)RAND_MAX < 0.01) {
+      sprintf(buf, "%d", rand());
+      convo_iter = convo_state_new(buf);
+      convo_iter->timeout = CONVO_TIMEOUT;
+      convo_iter->cur_state = STATE_WAIT_FOR_NEWSCAST_RESPONSE;
+      insert_convo(&g_convo_state_head, convo_iter);
+      message = mc_AclNew();
+      mc_AclSetPerformative(message, FIPA_REQUEST);
+      mc_AclSetConversationID(message, buf);
+      mc_AclSetSender(message, mc_agent_name, "localhost");
+      mc_AclAddReceiver(message, "newscast", NULL);
+      mc_AclSetContent(message, "REQUEST_HOSTS");
+      mc_AclSend(message);
+      mc_AclDestroy(message);
+      printf("%s requesting hosts from newscast.\n");
     }
   }
   return 0;

@@ -24,6 +24,7 @@ enum states {
   STATE_WAIT_FOR_GENE,  /* 2  */
   STATE_WAIT_FOR_AGENT_LIST, /* 3  */
   STATE_WAIT_FOR_INIT_MATE,  /* 4  */
+  STATE_WAIT_FOR_NEWSCAST_RESPONSE, /* 5 */
   STATE_MAX };  
 
 enum events {
@@ -37,6 +38,7 @@ enum events {
   EVENT_REQUEST_FITNESS,/* 7  */
   EVENT_RECEIVE_FITNESS,/* 8  */
   EVENT_TERMINATE,      /* 9 , Request that the agent terminate */
+  EVENT_RECEIVE_HOSTS,  /* 10, receive list of remote hosts from newscast agent */
   EVENT_MAX };
 
 typedef struct convo_state_s {
@@ -90,6 +92,7 @@ int action_s3_e6(convo_state_t* state);
 int action_s3_e9(convo_state_t* state);
 int action_s4_e3(convo_state_t* state);
 int action_s4_e9(convo_state_t* state);
+int action_s5_e10(convo_state_t* state);
 int action_handle_error(convo_state_t* state);
 int action_invoke_error(convo_state_t* state);
 

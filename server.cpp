@@ -447,8 +447,10 @@ int handleRequest(fipa_acl_message_t* acl)
     /* Create the gene */
     geneStr = "GENE ";
     if(g_geneQueue.size() > 0) {
-      geneStr += g_geneQueue.front()->str();
+      Gene* g = g_geneQueue.front();
+      geneStr += g->str();
       g_geneQueue.pop();
+      delete g;
     } else {
       std::ostringstream strm;
       for(i = 0; i < GENE_SIZE; i++) {

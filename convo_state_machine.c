@@ -35,6 +35,7 @@ void init_convo_state_machine()
   state_table[3][9] = action_s3_e9;
   state_table[4][3] = action_s4_e3;
   state_table[4][9] = action_s4_e9;
+  state_table[5][10] = action_s5_e10;
   for(i = 0; i < STATE_MAX; i++) {
     state_table[i][EVENT_ERROR] = action_handle_error;
   }
@@ -466,6 +467,13 @@ int action_s4_e9(convo_state_t* state)
 {
   terminate();
   return -2;
+}
+
+int action_s5_e10(convo_state_t* state)
+{
+  printf("%s received newscast content from newscast: %s\n", 
+      mc_agent_name, state->acl);
+  return 1;
 }
 
 int action_handle_error(convo_state_t* state) 
